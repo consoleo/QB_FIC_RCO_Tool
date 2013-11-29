@@ -38,6 +38,7 @@
 
   <!-- Load Google Maps and JavaScript API's and Google-hosted JQuery -->
   <script type="text/javascript" src="http://maps.google.com/maps/api/js?libraries=geometry&amp;sensor=false"></script>
+  <script type="text/javascript" src="http://maps.google.com/maps/api/js?libraries=weather&amp;sensor=false""></script>
   <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
   <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.16/jquery-ui.min.js"></script>
   <script type="text/javascript" src="http://www.google.com/jsapi"></script>
@@ -2221,6 +2222,10 @@
           position: google.maps.ControlPosition.LEFT_TOP
         }
       });
+	  
+	  //Add cloud layer
+      var cloudlayer = new google.maps.weather.CloudLayer();
+      cloudlayer.setMap(myMap);
 
       // Align title to right of map.
       $('#title').css('right', $('#right_panel').width());
