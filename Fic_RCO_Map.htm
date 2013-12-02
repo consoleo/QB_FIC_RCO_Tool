@@ -5,7 +5,7 @@
 
   <!--
 
-                  RCO Radio Map v2.1 BETA
+                  RCO Radio Map v2.2 BETA
 
       Coded by:       Darren Johnston (johdarr@navcanada.ca)
 						Modified by Michael Simard for YQB FIC (simarmi@navcanada.ca)      					
@@ -29,10 +29,16 @@
 06 Sept 2013 : revised RCO entries and removed PL and modified AH	
 
 11 Mars 2013 : Added LQ RCO and commented line 1751 (theme roller) that stalled page
+
+22 Nov 2013 : 	Did some separations of scripts to better isolate global variables
+				Rewrote Sigmet decoding algorithm in autoload functions to support new format. 
+				
+29 Nov 2013 : 	Fixed Autoload date verification routine
   -->
 
   <!-- Load Google Maps and JavaScript API's and Google-hosted JQuery -->
   <script type="text/javascript" src="http://maps.google.com/maps/api/js?libraries=geometry&amp;sensor=false"></script>
+  <script type="text/javascript" src="http://maps.google.com/maps/api/js?libraries=weather&amp;sensor=false""></script>
   <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
   <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.16/jquery-ui.min.js"></script>
   <script type="text/javascript" src="http://www.google.com/jsapi"></script>
@@ -184,6 +190,7 @@
     }
   </style>
 
+<!--  Global variables used -->
   <script type="text/javascript">
     // Mission setup.
     var MAP_CENTER = new google.maps.LatLng(55, -73);
@@ -247,7 +254,9 @@
     // constant. Duplication is required to lighten processing load at the
     // expense of slight increase in memory usage.
     var markerVars = [];
+</script>
 
+<script type="text/javascript">
     // Extends Numbers type to convert numeric degrees to radians.
     if (typeof(Number.prototype.toRad) === 'undefined') {
       Number.prototype.toRad = function() {
@@ -968,18 +977,36 @@
         addCoordEntry($(this));
       });
     }
+
+    /***********
+	/ Extract and return the expiration date and time from a SIGMET Text
+	*/
+	function extractExpiration(sigmetText)
+    {
+	    //Find the VALID keyword
+	    var startPos = sigmetText.indexOf('VALID');
+
+	    //extract the number string
+	    //We assume format ddhhmm/ddhhmm
+	    var periodStr = sigmetText.substr(startPos+6,13);
+
+	    return periodStr.substr(periodStr.indexOf('/')+1,6);
+
+    }
+
     
     /*
      * Automatically plot a SIGMET based on the SIGMET string.
      */
-    function autoPlotSigmet(sigmetText) {
+
+     function autoPlotSigmet(sigmetText) {
       // SigmetData is what we will manupulate, sigmetText is original text.
       var sigmetData = $(sigmetText).html();
       var sigmetText = sigmetData.replace(/(<br>)|(<br \/>)|(<p>)|(<\/p>)/g, '\r\n');
       sigmetData = sigmetText.replace(/(\r\n|\n|\r)/gm,' ');
       
       // Extract SIGMET ID.
-      var sigmetID = sigmetData.substr(27, 2); 
+      var sigmetID = sigmetData.substr(sigmetData.indexOf('SIGMET')+7,2).substr(0,2); 
       // Verify SIGMET isn't already plotted.
       var currSigmetIDs = $('#sigmet_tabs_div').find('input[name=sigmet_id]');
       while (currSigmetIDs.size() > 0) {
@@ -990,60 +1017,34 @@
         currSigmetIDs = currSigmetIDs.not(currSigmetIDs.first());
       }
       
-      // Remove unneeded header information.
-      var trimmedData = sigmetData.substr(60);
       // Extract radius if there is one, otherwise use 0NM.
       var radius = 0;
       // If the first character is a number, extract the radius.
-      if (!isNaN(trimmedData.charAt(0))) {
-        var i = 1;
-        while (!isNaN(trimmedData.charAt(i))) {
-          ++i;
-        }
-        radius = parseInt(trimmedData.substring(0, i));
+      if (!isNaN(sigmetData.substr(sigmetData.indexOf('WTN'),10).substr(4,2))) {
+        radius = sigmetData.substr(sigmetData.indexOf('WTN'),10).substr(4,2);
       }
-      
-      // if the trimmed data starts with AREA, we'll need to close the shape.
-      var isArea = false;
-      if (trimmedData.substr(0,4) == 'AREA') {
-        isArea = true;
-      }
-      
-      // Trim final line which begins with ' END/'.
-      var endIndex = trimmedData.indexOf(' END/');
-      trimmedData = trimmedData.substr(0, endIndex);
-      
-      // Location portion of SIGMET ends with a period.
-      var locationData = trimmedData.substring(0, 
-        trimmedData.indexOf('.'));
-      
+            
       // Extract lat/lng points which are delimited by /'s.
       var coordinateArray = new Array();
-      var slashIndex = locationData.indexOf('/');
+
+      var locationData = sigmetData;
+      var slashIndex = locationData.indexOf('/N');
       while (slashIndex >= 0) {
-        var nextSlashIndex = locationData.indexOf('/', slashIndex + 1);
-        // If no trailing slash was found, the data does not make sense.
-        if (nextSlashIndex < 0) {
-          alert("Sorry, this SIGMET is irregular and cannot be automatically parsed.");
-          return;
-        }
-        // The string between these 2 / indexes should be a coordinate.
-        var tempString = locationData.substring(slashIndex + 1, nextSlashIndex);
+		var tempCoord = new Array();
+
         // Extract Lat and Long.
-        var tempCoord = new Array();
-        var northIndex = tempString.indexOf('N');
-        var westIndex = tempString.indexOf('W');        
-        if ((northIndex < 0) || (westIndex < 0)) {
-          alert("Sorry, this SIGMET is irregular and cannot be automatically parsed.");
-          return;
-        }
+        
         // Store lat and long in tempCoord.
-        tempCoord.push(tempString.substring(0, northIndex));
-        tempCoord.push(tempString.substring(northIndex + 1, westIndex));
+        tempCoord.push(locationData.substr(slashIndex+2,4));
+
+      	//Look for W after North coord and take next 5 char
+        var w_pos = locationData.substr(slashIndex+2,30).indexOf('W');
+		tempCoord.push(locationData.substr(slashIndex+2,30).substr(w_pos+1,5));
+
         // Now push that coordinate onto the array.
         coordinateArray.push(tempCoord);
         // Now move slashIndex to the next / after nextSlashIndex.
-        slashIndex = locationData.indexOf('/', nextSlashIndex + 1);
+        slashIndex = locationData.indexOf('/N', slashIndex + 1);
       }
       
       // Determine how many coordinate entry boxes will be needed.
@@ -1062,11 +1063,12 @@
       
       // Set SIGMET ID.
       currTab.find('input[name=sigmet_id]').val(sigmetID);
-      
+
+      /*
       // Check "close area" box if it should be.
       if (isArea) {
         currTab.find('input[name=closed_area]').prop('checked', true);
-      }
+      }*/
       
       // Set the radius.
       currTab.find('input[name=sigmet_radius]').val(radius);
@@ -1094,186 +1096,153 @@
       // Plot the sigmet.
       currTab.find('button[name=plot_data]').click();
     }
-    
-    /*
-     * Automatically generate SIGMET data from internet file and plot it.
-     * NB: Currently uses txt file generated by NOAA at:
-     *    http://aviationweather.gov/data/iffdp/6440.txt
-     */
-    function autoSigmet() {
-      // Add loading notification
-      var filename = 'http://anyorigin.com/get?url=http%3A//aviationweather.gov/data/iffdp/6440.txt&callback=?';
-      var sigmetDiv = $('#modal_sigmet');
-      sigmetDiv.dialog('open');
-      sigmetDiv.append('<p>Loading data, please wait...</p>');
-      
-      // Load the file containing SIGMET data from NOAA.
-      $.getJSON(filename, function(data){
-        var sigmetReqLines = data.contents.split("\n");
-        // Strip leading lines that don't contain sigmet data.
-        // NB. First line of first SIGMET will start with area, viz WSCN.
-        while (sigmetReqLines[0].charAt(0) != 'W') {
-          sigmetReqLines.shift();
-        }
-        // Strip trailing lines that don't contain sigmet data.
-        // NB. Last line of last sigmet will end with the word 'END'.
-        while (sigmetReqLines[sigmetReqLines.length - 1].charAt(0) != 'E') {
-          sigmetReqLines.pop();
-        }
-        
-        // Parse SIGMETs into individual variables
-        var temp = sigmetReqLines[0];
-        sigmetReqLines.shift();
-        var autoSigmetArray = new Array();
-        // Parse until the array of lines is empty.
-        while (sigmetReqLines.length >= 1) {
-          // If the line is blank, push sigmet string onto array
-          // and remove first line.
-          if(sigmetReqLines[0] == '') {
-            autoSigmetArray.push(temp);
-            sigmetReqLines.shift();
-            // If there is more data to process, set temp to next line
-            // to continue processing.
-            if(sigmetReqLines.length >= 1) {
-              temp = sigmetReqLines[0];
-            }
-          }
-          // If the line wasn't blank, continue adding to current sigmet.
-          else {
-            temp = temp.concat(' <br />', sigmetReqLines[0]);
-          }
-          sigmetReqLines.shift();
-        }
-        // Last line is not blank, so push final sigmet on to array.
-        autoSigmetArray.push(temp);
-        // Array will have oldest sigmet at start, so reverse to get most recent
-        // at the start.
-        autoSigmetArray.reverse();
-        
-        // Remove older sigmets. ie If there is a D2 and a D3, remove D2.
-        var sigmetChars = '';
-        for (var i = 0; i < autoSigmetArray.length; ++i) {
-          var temp = autoSigmetArray[i].charAt(32);
-          // If the sigmet series (A, B, C, etc) exists already, remove this entry.
-          if (sigmetChars.indexOf(temp) >= 0) {
-            autoSigmetArray.splice(i, 1);
-            --i;
-          }
-          // Otherwise, add this letter to the list of active sigmets and
-          // delete the entry if it is a cancellation sigmet.
-          else {
-            sigmetChars += temp;
-            if (autoSigmetArray[i].indexOf('CANCELLED') >= 0) {
-              autoSigmetArray.splice(i, 1);
-              --i;
-            }
-          }
-        }
-        
-        // Parse sigmets into areas
-        var WSCN31 = new Array();
-        var WSCN32 = new Array();
-        var WSCN33 = new Array();
-        var WSCN34 = new Array();
-        var WSCN35 = new Array();
-        var WSCN36 = new Array();
-        var WSCN37 = new Array();
-        
-        while (autoSigmetArray.length >= 1) {
-          switch (autoSigmetArray[0].substr(0, 6)) {
-            case 'WSCN31':
-              WSCN31.push(autoSigmetArray[0]);
-              autoSigmetArray.shift();
-              break;
-            case 'WSCN32':
-              WSCN32.push(autoSigmetArray[0]);
-              autoSigmetArray.shift();
-              break;
-            case 'WSCN33':
-              WSCN33.push(autoSigmetArray[0]);
-              autoSigmetArray.shift();
-              break;
-            case 'WSCN34':
-              WSCN34.push(autoSigmetArray[0]);
-              autoSigmetArray.shift();
-              break;
-            case 'WSCN35':
-              WSCN35.push(autoSigmetArray[0]);
-              autoSigmetArray.shift();
-              break;
-            case 'WSCN36':
-              WSCN36.push(autoSigmetArray[0]);
-              autoSigmetArray.shift();
-              break;
-            case 'WSCN37':
-              WSCN37.push(autoSigmetArray[0]);
-              autoSigmetArray.shift();
-              break;
-            default:
-              autoSigmetArray.shift();
-          }
-        }
-        
-        // Output the list of areas and associated sigmets.
-        sigmetDiv.children('p').remove();
-        sigmetDiv.children('h3').empty().append('Select SIGMET to plot...');
-        sigmetDiv.append('<h3>WSCN31 Pacific</h3>');
-        if(WSCN31.length < 1) {
-          sigmetDiv.append('<p>No active SIGMETs.</p>');
-        }
-        else for (var i = 0; i < WSCN31.length; ++i) {
-          sigmetDiv.append('<p class=\'active\'>' + WSCN31[i] + '</p>');
-        }
-        sigmetDiv.append('<h3>WSCN32 Prairies</h3>');
-        if(WSCN32.length < 1) {
-          sigmetDiv.append('<p>No active SIGMETs.</p>');
-        }
-        else for (var i = 0; i < WSCN32.length; ++i) {
-          sigmetDiv.append('<p class=\'active\'>' + WSCN32[i] + '</p>');
-        }
-        sigmetDiv.append('<h3>WSCN33 Ontario and Quebec</h3>');
-        if(WSCN33.length < 1) {
-          sigmetDiv.append('<p>No active SIGMETs.</p>');
-        }
-        else for (var i = 0; i < WSCN33.length; ++i) {
-          sigmetDiv.append('<p class=\'active\'>' + WSCN33[i] + '</p>');
-        }
-        sigmetDiv.append('<h3>WSCN34 Atlantic</h3>');
-        if(WSCN34.length < 1) {
-          sigmetDiv.append('<p>No active SIGMETs.</p>');
-        }
-        else for (var i = 0; i < WSCN34.length; ++i) {
-          sigmetDiv.append('<p class=\'active\'>' + WSCN34[i] + '</p>');
-        }
-        sigmetDiv.append('<h3>WSCN35 Yukon and NWT</h3>');
-        if(WSCN35.length < 1) {
-          sigmetDiv.append('<p>No active SIGMETs.</p>');
-        }
-        else for (var i = 0; i < WSCN35.length; ++i) {
-          sigmetDiv.append('<p class=\'active\'>' + WSCN35[i] + '</p>');
-        }
-        sigmetDiv.append('<h3>WSCN36 Nunavut</h3>');
-        if(WSCN36.length < 1) {
-          sigmetDiv.append('<p>No active SIGMETs.</p>');
-        }
-        else for (var i = 0; i < WSCN36.length; ++i) {
-          sigmetDiv.append('<p class=\'active\'>' + WSCN36[i] + '</p>');
-        }
-        sigmetDiv.append('<h3>WSCN37 Arctic</h3>');
-        if(WSCN37.length < 1) {
-          sigmetDiv.append('<p>No active SIGMETs.</p>');
-        }
-        else for (var i = 0; i < WSCN37.length; ++i) {
-          sigmetDiv.append('<p class=\'active\'>' + WSCN37[i] + '</p>');
-        }
-        
-        // Set click bindings on SIGMETs.
-        sigmetDiv.children('p.active').css('cursor', 'pointer').bind('click', function() {
-          autoPlotSigmet(this);
-        });
-      });
-    }
 
+/*
+ * Remake of the autoload sigmet functions to work with new format
+ */
+ 	function autoSigmet()
+	{
+	    // Add loading notification
+	    var filename = 'http://anyorigin.com/get?url=http%3A//aviationweather.gov/data/iffdp/6440.txt&callback=?';
+	    var sigmetDiv = $('#modal_sigmet');
+	    sigmetDiv.dialog('open');
+	    sigmetDiv.append('<p>Loading data, please wait...</p>');
+	    
+	    // Load the file containing SIGMET data from NOAA and put it in a JSON array
+	    $.getJSON(filename, function(data){  
+	      	var sigmetReqLines = data.contents.split("\n");
+
+	    	//Discard header that are not Sigmet
+			while (sigmetReqLines[0].substr(0,4) != "WSCN")
+			{
+				sigmetReqLines.shift();
+			}
+
+			//Discard trailing lines that are not SIGMET
+			
+			//Check if last entry is a Sigmet or not
+			if (sigmetReqLines[sigmetReqLines.length-2].substr(0,2)== "No")
+			{
+				//Remove empty last line and no sigmet line
+				sigmetReqLines.pop();
+				sigmetReqLines.pop();
+			}
+			//Scan end of results to remove no sigmet lines
+			while (sigmetReqLines[sigmetReqLines.length-1].substr(0,2)== "No")
+			{
+				sigmetReqLines.pop();
+			}
+
+			var rawSigmet = new Array();
+
+			//While ther is data to add
+			while (sigmetReqLines.length >= 1)
+			{
+				var sigmettext ="";
+				while (sigmetReqLines[0] !="")
+				{
+					sigmettext += sigmetReqLines[0];
+					sigmettext += " <br> ";
+					sigmetReqLines.shift();
+				}
+				//Delete the empty line that remain
+				sigmetReqLines.shift();
+
+				//Check if sigmet is domestic format if not, discard
+				if (sigmettext.substr(4,2) >= 20)
+					//Add Sigmet to array
+					rawSigmet.push(sigmettext);
+				
+			}
+
+			//Scan for duplicates and cancellation and remove old data
+			var pos_cur = 0;
+			while (pos_cur < rawSigmet.length)
+			{
+				//Check if it is a Cancel, if so remove it, if not, check for newet
+				if (rawSigmet[pos_cur].indexOf('CNCL') >= 0)
+					rawSigmet.splice(pos_cur,1);
+				else
+				{
+						
+					//Extract letter and number of the Sigmet
+					var curSigmetNumber = rawSigmet[pos_cur].substr(rawSigmet[pos_cur].indexOf('SIGMET')+7,2);
+					var curFIR = rawSigmet[pos_cur].substr(rawSigmet[pos_cur].indexOf('CZ'),4);
+	
+					//Scan the remainder of Sigmet for newer, we only look at those after the current line, the others are already newest
+					for (pos_comp=0;pos_comp < (rawSigmet.length);pos_comp++)
+					{
+						//If checking current position, skip
+						if(pos_comp!=pos_cur)
+						{
+							//Check if it is the same letter and FIR
+							if ((curSigmetNumber.substr(0,1) == rawSigmet[pos_comp].substr(rawSigmet[pos_comp].indexOf('SIGMET')+7,1))
+								&& (curFIR == rawSigmet[pos_comp].substr(rawSigmet[pos_comp].indexOf('CZ'),4)))
+							{
+								//Check if date is higher
+								
+								
+								//if (curSigmetNumber.substr(1,1) >= rawSigmet[pos_comp].substr(rawSigmet[pos_comp].indexOf('SIGMET')+8,1))
+								
+								var current = rawSigmet[pos_cur];
+								var compare = rawSigmet[pos_comp];
+
+								var date_current = extractExpiration(current).substr(0,2);
+								var date_compare =  extractExpiration(compare).substr(0,2);
+
+								var time_current = extractExpiration(current).substr(2,4);
+								var time_compare = extractExpiration(compare).substr(2,4);
+
+								
+								//Check if date is more recent
+								 
+								if (
+										//Currect date is lower 
+										(date_current > date_compare)
+										
+										//If we skip a month, we assume there will never be data for a whole month in the input data
+										| ((date_current < 10) && (date_compare > 20))
+										//Date is same and time is later
+										| (date_current == date_compare) && (time_current > time_compare)
+									)
+									//current is higher so we remove the other one
+									rawSigmet.splice(pos_comp,1);
+								else
+								{
+									//current is older, remove it
+									rawSigmet.splice(pos_cur,1);
+									//Nullify pos_cur++ after loop to remain at current position in rawSigmet since we removed and entry
+									pos_cur--;
+									break;
+								}
+							}
+						}
+					}
+					pos_cur++;
+				}
+			}
+
+			
+			//Remove waiting header and add SIGMET that remains to the display
+			sigmetDiv.children('p').remove();
+			sigmetDiv.children('h3').empty().append('Select SIGMET to plot...');
+			
+			for (cpt =0;cpt<rawSigmet.length;cpt++)
+			{		
+				sigmetDiv.append('<p class=\'active\'>' + rawSigmet[cpt] + '<br></p>');
+			}
+			
+			//Add click binding
+			sigmetDiv.children('p.active').css('cursor','pointer').bind('click',
+					function(){
+						autoPlotSigmet(this);
+					});
+			
+	   	});
+	}
+
+	
+	
     /*
      * Determines if a point is within a polygon. Based on the PNPOLY FORTRAN
      * code written at University of Ottawa by W. Randolf Franklin in 1970.
@@ -2071,6 +2040,10 @@
           position: google.maps.ControlPosition.LEFT_TOP
         }
       });
+	  
+	  //Add cloud layer
+      var cloudlayer = new google.maps.weather.CloudLayer();
+      cloudlayer.setMap(myMap);
 
       // Align title to right of map.
       $('#title').css('right', $('#right_panel').width());
