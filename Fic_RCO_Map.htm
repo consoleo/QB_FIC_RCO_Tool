@@ -191,6 +191,7 @@
 
 <!--  Global variables used -->
   <script type="text/javascript">
+  
     // Mission setup.
     var MAP_CENTER = new google.maps.LatLng(55, -73);
     
@@ -253,8 +254,96 @@
     // constant. Duplication is required to lighten processing load at the
     // expense of slight increase in memory usage.
     var markerVars = [];
+	var wxMarkerVars = [];
 </script>
 
+<!-- Functions regarding dot plot -->
+<script type="text/javascript">
+
+	//Add marker for each station in input XML
+	function plotStations(xmlInput)
+	{
+		$(xmlInput).find('METAR').each(function()
+			{
+				//Extract Text, lat and long, and add the marker
+				var text = $(this).find('raw_text').text();
+				var lat = $(this).find('latitude').text();
+				var lng = $(this).find('longitude').text();
+				
+				var marker = new google.maps.Marker
+				(
+					{
+					map : myMap,
+					position: new google.maps.LatLng(lat,lng),
+					title: text,
+					//icon : MARKER_BASE_URL,
+					zIndex:1
+					}
+				);
+				
+				wxMarkerVars.push(marker);
+			
+			});
+			
+	}
+	
+	//Get all latest obs between given coords, Used on initial load
+	function getLatestMetars(lat1,lon1,lat2,lon2)
+	{
+		//Round all values
+		lat1 = Math.round(lat1);
+		lat2 = Math.round(lat2);
+		lon1 = Math.round(lon1);
+		lon2 = Math.round(lon2);
+		//if lat and long are the same, alter them 1 deg to make sure result are good
+		if(lat1==lat2)
+			lat1 = lat2-1;
+			
+		if(lon1 == lon2)
+			lon1 = lon2-1;
+		
+		var data;
+		
+		var request = "http://www.aviationweather.gov/adds/dataserver_current/httpparam?"+
+					"dataSource=metars"+
+					"&requestType=retrieve"+
+					"&format=xml"+
+					"&mostRecentForEachStation=constraint"+
+					"&hoursBeforeNow=1"+
+					"&minLat="+lat1+
+					"&minLon="+lon1+
+					"&maxLat="+lat2+
+					"&maxLon="+lon2;
+	
+		jQuery.support.cors = true;
+		$.ajax({
+				crossDomain : true,
+				type: "GET",
+				url: request,
+				dataType: "xml",
+				success :function(xml,status){data = xml;},
+				error: function(xml){ alert("An error occured while processing XML data from ADDS "+xml.status + " " + xml.statusText);}
+				});
+		
+		return data;
+	}
+	
+	function addDotplot()
+	{
+		
+		//Get all Metars for current map 
+		var mapBounds = myMap.getBounds();
+		var boundNE = mapBounds.getNorthEast();
+		var boundSW = mapBounds.getSouthWest();
+		var metarXML = getLatestMetars(boundSW.lat(),boundSW.lng(),boundNE.lat(),boundNE.lng());
+		plotStations(metarXML);
+		
+	}
+	
+</script>
+
+
+<!-- All function up to dot plot are here-->
 <script type="text/javascript">
     // Extends Numbers type to convert numeric degrees to radians.
     if (typeof(Number.prototype.toRad) === 'undefined') {
@@ -2040,6 +2129,8 @@
         }
       });
 
+	
+	
       // Align title to right of map.
       $('#title').css('right', $('#right_panel').width());
 
@@ -2185,11 +2276,13 @@
       $('#auto_sigmet').bind('click', function() {
         autoSigmet();
       });
+	  $('#add_dotplot').bind('click',function(){addDotplot();});
 
       // Hide loading div and show titile when tiles are loaded.
       google.maps.event.addListener(myMap, "tilesloaded", function() {
         $('#loading').addClass('hidden');
       });
+	  
     }
 
     $(document).ready(init);
@@ -2260,6 +2353,7 @@
     <h2><a href="#">PIREPs</a></h2>
     <div id="pireps">
       <button id="add_pirep" class="bottom_margin add_tab">New PIREP</button>
+	  <button id="add_dotplot" class="bottom_margin">Add Dot Plot</button>
       <div id="pirep_tabs_div" class="tabs">
         <ul id="pirep_tabs">
         </ul>
