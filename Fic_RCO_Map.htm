@@ -1003,8 +1003,8 @@
       // Extract radius if there is one, otherwise use 0NM.
       var radius = 0;
       // If the first character is a number, extract the radius.
-      if (!isNaN(sigmetData.substr(sigmetData.indexOf('WTN'),10).substr(4,2))) {
-        radius = sigmetData.substr(sigmetData.indexOf('WTN'),10).substr(4,2);
+      if (!isNaN(sigmetData.substr(sigmetData.indexOf('WTN'),11).substr(4,2))) {
+		radius = sigmetData.substr(sigmetData.indexOf('WTN'),10).match(/[0-9]+/g)[0];
       }
             
       // Extract lat/lng points which are delimited by /'s.
