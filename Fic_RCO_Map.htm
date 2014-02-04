@@ -3,9 +3,7 @@
   <meta http-equiv="content-type" content="text/html; charset=utf-8" />
   <title>FIC RCO Map</title>
 
-  <!--
-
-                  RCO Radio Map v2.2 BETA
+  <!--RCO Radio Map v2.2 BETA
 
       Coded by:       Darren Johnston (johdarr@navcanada.ca)
 						Modified by Michael Simard for YQB FIC (simarmi@navcanada.ca)      					
@@ -255,6 +253,8 @@
     var markerVars = [];
 </script>
 
+
+<!-- Coord processing functions -->
 <script type="text/javascript">
     // Extends Numbers type to convert numeric degrees to radians.
     if (typeof(Number.prototype.toRad) === 'undefined') {
@@ -404,6 +404,10 @@
       }
     }
 
+</script>
+
+<!-- Maps and UI related functions -->
+<script type="text/javascript">
     /*
      * Creates the markers and draws RCO rings.
      *
@@ -795,33 +799,6 @@
     	
     }
 	
-	
-    /*
-     * Resets the input tab to default values, or to the previous values if
-     * the tab had been submitted before.
-     *
-     * @param tab [jQuery Object] The active tab.
-     * @param inputType [String] Either 'sigmet', 'pirep' or 'notam'.
-     */
-    function resetInput(tab, inputType) {
-      var tabID = $(tab).attr('id');
-      // If a backup exists, reset to that data.
-      if($('#backup-' + tabID).length) {
-        var parent = $(tab).parent();
-        $(tab).empty();
-        $('#backup-' + tabID).children().clone(true).appendTo(tab);
-      }
-      // Otherwise reset to defaults.
-      else {
-        // Empty text fields.
-        $(tab).find(':text').val('');
-        // Set the radius to 0.
-        $(tab).find('[name=sigmet_radius]').val('0');
-        // Uncheck all checkboxes.
-        $(tab).find(':checkbox').removeAttr('checked');
-      }
-    }
-
     /*
      * Hides the plotted data for the supplied tab.
      *
@@ -858,6 +835,35 @@
       // Hide the "show" button and display the "hide" button.
       $(tab).find('[name=show]').addClass('hidden');
       $(tab).find('[name=hide]').removeClass('hidden');
+    }
+</script>
+
+<!-- Input related functions -->
+<script type="text/javascript">
+/*
+     * Resets the input tab to default values, or to the previous values if
+     * the tab had been submitted before.
+     *
+     * @param tab [jQuery Object] The active tab.
+     * @param inputType [String] Either 'sigmet', 'pirep' or 'notam'.
+     */
+    function resetInput(tab, inputType) {
+      var tabID = $(tab).attr('id');
+      // If a backup exists, reset to that data.
+      if($('#backup-' + tabID).length) {
+        var parent = $(tab).parent();
+        $(tab).empty();
+        $('#backup-' + tabID).children().clone(true).appendTo(tab);
+      }
+      // Otherwise reset to defaults.
+      else {
+        // Empty text fields.
+        $(tab).find(':text').val('');
+        // Set the radius to 0.
+        $(tab).find('[name=sigmet_radius]').val('0');
+        // Uncheck all checkboxes.
+        $(tab).find(':checkbox').removeAttr('checked');
+      }
     }
 
     /*
@@ -919,7 +925,114 @@
         addCoordEntry($(this));
       });
     }
+    /*
+     * Extracts input data from the DOM elements.
+     *
+     * @param tab [jQuery object] The active SIGMET tab.
+     * @param callback [Function] The callback function; takes extracted
+     *      coordinates as a parameter.
+     * @throws [String] If coordinate data does not match type of data input
+     *      or if coordinates are invalid.
+     */
+    function extractInput(tab, callback) {
+      // Start with an empty array.
+      var extractedCoords = [];
+      // Get the coordinate unput fields.
+      var inputData = $(tab).find('.coordinate');
+      // Iteratre over each set of coordinates input.
+      for(var i = 0; i < inputData.length; ++i) {
+        // Only extract data from the non-hidden input method.
+        var currCoord = $(inputData[i]).children('div:not(.hidden)');
+        // Processing varies depending on if coordinates are entered via
+        // coordinates or ICAO code.
+        if($(currCoord).hasClass('coord_entry')) {
+          // Extract coordinate and remove any spaces that may exist.
+          var lat = $(currCoord).find('[name=lat]').val().replace(' ', '');
+          var lng = $(currCoord).find('[name=lng]').val().replace(' ', '');
+          // Only process if both lat and lng are not blank, otherwise move on
+          // to the next set.
+          if(!(lat == '' && lng == '')) {
+            // If only one coordinate is empty or if either contains invalid
+            // input, throw an exception.
+            if(isNaN(lat) || isNaN(lng) || lat == '' || lng == '') {
+              throw('Coordinates contain invalid data.');
+            }
+            // If the number is in decimal format it will have a decimal.
+            if(lat.indexOf('.') != -1) {
+              // Only processing needed is to convert to float.
+              lat = +lat;
+            }
+            // Otherwise it's an integer and can be parsed.
+            else {
+              lat = parseCoord(lat);
+            }
+            // Do the same for lng.
+            if(lng.indexOf('.') != -1) {
+              lng = +lng;
+            }
+            else {
+              lng = parseCoord(lng);
+            }
+            // Assign new coordData object to the appropriate index.
+            // NB: This is done instead of push() because ICAO coords are
+            // retrieved asynchronously but the order must be maintained.
+            extractedCoords[i] = new coordData('coord', lat, lng);
+          }
+        }
+        // If it's not coordinate entry, it must be ICAO.
+        else {
+          // Extract bearing and range, remove all whitespace and forward
+          // slashes.
+          var brngRng = $(currCoord).find('[name=brng_rng]').val()
+              .replace(' ', '').replace('/', '');
+          var bearing, range;
+          // If the text box was empty, set it to 0.
+          if(brngRng == '') {
+            brngRng = 0;
+            bearing = 0;
+            range = 0;
+          }
+          // Otherwise extract the values.
+          else {
+            // brngRng must be at least 4 characters long.
+            if(brngRng.length < 4 && brngRng != 0) {
+              throw('Bearing/Range is not valid.');
+            }
+            // If brngRange isn't 0, extract bearing and range.
+            // NB: 1852m per NM
+            bearing = brngRng.substr(0, 3);
+            range = brngRng.slice(3) * 1852;
+            if(isNaN(bearing) || isNaN(range)) {
+              throw('Bearing/Range is not valid.');
+            }
+          }
+          // Extract ICAO code
+          var icaoCode = $(currCoord).find('[name=icao_ident]').val();
+          // If icaoCode is valid, it will be either 3 or 4 characters long.
+          if(icaoCode.length != 3 && icaoCode.length != 4) {
+            throw('Invalid location code.');
+          }
+          // If the length is 3, assume Canadian identifier and prepend a C.
+          if(icaoCode.length == 3) {
+            icaoCode = 'C' + icaoCode;
+          }
+          // Assign new coordData object to the appropriate index.
+          // NB: This is done instead of push() because ICAO coords are
+          // retrieved asynchronously but the order must be maintained.
+          extractedCoords[i] = new coordData('icao', bearing, range,
+              icaoCode);
+        }
+      }
+      // Execute the callback.
+      if(typeof callback == 'function') {
+        callback(extractedCoords);
+      }
+    }
 
+</script>
+
+<!-- Auto Sigmet functions -->
+<script type="text/javascript">
     /***********
 	/ Extract and return the expiration date and time from a SIGMET Text
 	*/
@@ -1183,7 +1296,10 @@
 	   	});
 	}
 
-	
+</script>
+
+<!-- Calculations functions -->
+<script type="text/javascript">	
 	
     /*
      * Determines if a point is within a polygon. Based on the PNPOLY FORTRAN
@@ -1288,109 +1404,6 @@
       }
     }
 
-    /*
-     * Extracts input data from the DOM elements.
-     *
-     * @param tab [jQuery object] The active SIGMET tab.
-     * @param callback [Function] The callback function; takes extracted
-     *      coordinates as a parameter.
-     * @throws [String] If coordinate data does not match type of data input
-     *      or if coordinates are invalid.
-     */
-    function extractInput(tab, callback) {
-      // Start with an empty array.
-      var extractedCoords = [];
-      // Get the coordinate unput fields.
-      var inputData = $(tab).find('.coordinate');
-      // Iteratre over each set of coordinates input.
-      for(var i = 0; i < inputData.length; ++i) {
-        // Only extract data from the non-hidden input method.
-        var currCoord = $(inputData[i]).children('div:not(.hidden)');
-        // Processing varies depending on if coordinates are entered via
-        // coordinates or ICAO code.
-        if($(currCoord).hasClass('coord_entry')) {
-          // Extract coordinate and remove any spaces that may exist.
-          var lat = $(currCoord).find('[name=lat]').val().replace(' ', '');
-          var lng = $(currCoord).find('[name=lng]').val().replace(' ', '');
-          // Only process if both lat and lng are not blank, otherwise move on
-          // to the next set.
-          if(!(lat == '' && lng == '')) {
-            // If only one coordinate is empty or if either contains invalid
-            // input, throw an exception.
-            if(isNaN(lat) || isNaN(lng) || lat == '' || lng == '') {
-              throw('Coordinates contain invalid data.');
-            }
-            // If the number is in decimal format it will have a decimal.
-            if(lat.indexOf('.') != -1) {
-              // Only processing needed is to convert to float.
-              lat = +lat;
-            }
-            // Otherwise it's an integer and can be parsed.
-            else {
-              lat = parseCoord(lat);
-            }
-            // Do the same for lng.
-            if(lng.indexOf('.') != -1) {
-              lng = +lng;
-            }
-            else {
-              lng = parseCoord(lng);
-            }
-            // Assign new coordData object to the appropriate index.
-            // NB: This is done instead of push() because ICAO coords are
-            // retrieved asynchronously but the order must be maintained.
-            extractedCoords[i] = new coordData('coord', lat, lng);
-          }
-        }
-        // If it's not coordinate entry, it must be ICAO.
-        else {
-          // Extract bearing and range, remove all whitespace and forward
-          // slashes.
-          var brngRng = $(currCoord).find('[name=brng_rng]').val()
-              .replace(' ', '').replace('/', '');
-          var bearing, range;
-          // If the text box was empty, set it to 0.
-          if(brngRng == '') {
-            brngRng = 0;
-            bearing = 0;
-            range = 0;
-          }
-          // Otherwise extract the values.
-          else {
-            // brngRng must be at least 4 characters long.
-            if(brngRng.length < 4 && brngRng != 0) {
-              throw('Bearing/Range is not valid.');
-            }
-            // If brngRange isn't 0, extract bearing and range.
-            // NB: 1852m per NM
-            bearing = brngRng.substr(0, 3);
-            range = brngRng.slice(3) * 1852;
-            if(isNaN(bearing) || isNaN(range)) {
-              throw('Bearing/Range is not valid.');
-            }
-          }
-          // Extract ICAO code
-          var icaoCode = $(currCoord).find('[name=icao_ident]').val();
-          // If icaoCode is valid, it will be either 3 or 4 characters long.
-          if(icaoCode.length != 3 && icaoCode.length != 4) {
-            throw('Invalid location code.');
-          }
-          // If the length is 3, assume Canadian identifier and prepend a C.
-          if(icaoCode.length == 3) {
-            icaoCode = 'C' + icaoCode;
-          }
-          // Assign new coordData object to the appropriate index.
-          // NB: This is done instead of push() because ICAO coords are
-          // retrieved asynchronously but the order must be maintained.
-          extractedCoords[i] = new coordData('icao', bearing, range,
-              icaoCode);
-        }
-      }
-      // Execute the callback.
-      if(typeof callback == 'function') {
-        callback(extractedCoords);
-      }
-    }
 
     /*
      * Recursively extract coordinate from input data. Strip last array
@@ -1548,6 +1561,10 @@
       });
     }
 
+</script>
+
+<!-- Plot functions -->
+<script type="text/javascript">
     /*
      * Plots a SIGMET after extracting required information from form
      * elements.
@@ -1963,6 +1980,10 @@
       }
     }
 
+</script>
+
+<!-- Init functions -->
+<script type="text/javascript">
     /*
      * Initializes the application by loading the map and assets, configuring
      * listeners and setting up the UI.
@@ -2136,7 +2157,7 @@
     }
 
     $(document).ready(init);
-  </SCRIPT>
+	</SCRIPT>
 
 </head>
 <body>
