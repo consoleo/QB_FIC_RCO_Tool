@@ -597,7 +597,6 @@
       else {
         // Uncheck all boxes for that RCO across all missions.
         var rcoName = $(rcoBox).attr('name');
-        //alert(rcoName);
         $('[name=' + $(rcoBox).attr('name') + ']').removeAttr('checked');
         rcoData[rcoData.length - 1].setMap(null);
         // If markers are set to hide, hide that as well.
