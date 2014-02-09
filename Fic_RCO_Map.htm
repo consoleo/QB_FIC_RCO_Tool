@@ -1163,136 +1163,156 @@
 	    sigmetDiv.append('<p>Loading data, please wait...</p>');
 	    
 	    // Load the file containing SIGMET data from NOAA and put it in a JSON array
-	    $.getJSON(filename, function(data){  
-	      	var sigmetReqLines = data.contents.split("\n");
+	    $.getJSON(filename) 
+			.done(function(data){  
+				var sigmetReqLines = data.contents.split("\n");
 
-	    	//Discard header that are not Sigmet
-			while (sigmetReqLines[0].substr(0,4) != "WSCN")
-			{
-				sigmetReqLines.shift();
-			}
-
-			//Discard trailing lines that are not SIGMET
-			
-			//Check if last entry is a Sigmet or not
-			if (sigmetReqLines[sigmetReqLines.length-2].substr(0,2)== "No")
-			{
-				//Remove empty last line and no sigmet line
-				sigmetReqLines.pop();
-				sigmetReqLines.pop();
-			}
-			//Scan end of results to remove no sigmet lines
-			while (sigmetReqLines[sigmetReqLines.length-1].substr(0,2)== "No")
-			{
-				sigmetReqLines.pop();
-			}
-
-			var rawSigmet = new Array();
-
-			//While ther is data to add
-			while (sigmetReqLines.length >= 1)
-			{
-				var sigmettext ="";
-				while (sigmetReqLines[0] !="")
+				//Discard header that are not Sigmet
+				while (sigmetReqLines[0].substr(0,4) != "WSCN")
 				{
-					sigmettext += sigmetReqLines[0];
-					sigmettext += " <br> ";
 					sigmetReqLines.shift();
-				}
-				//Delete the empty line that remain
-				sigmetReqLines.shift();
-
-				//Check if sigmet is domestic format if not, discard
-				if (sigmettext.substr(4,2) >= 20)
-					//Add Sigmet to array
-					rawSigmet.push(sigmettext);
-				
-			}
-
-			//Scan for duplicates and cancellation and remove old data
-			var pos_cur = 0;
-			while (pos_cur < rawSigmet.length)
-			{
-				//Check if it is a Cancel, if so remove it, if not, check for newet
-				if (rawSigmet[pos_cur].indexOf('CNCL') >= 0)
-					rawSigmet.splice(pos_cur,1);
-				else
-				{
-						
-					//Extract letter and number of the Sigmet
-					var curSigmetNumber = rawSigmet[pos_cur].substr(rawSigmet[pos_cur].indexOf('SIGMET')+7,2);
-					var curFIR = rawSigmet[pos_cur].substr(rawSigmet[pos_cur].indexOf('CZ'),4);
-	
-					//Scan the remainder of Sigmet for newer, we only look at those after the current line, the others are already newest
-					for (pos_comp=0;pos_comp < (rawSigmet.length);pos_comp++)
+					
+					//Stop the loop if array is empty
+					if (sigmetReqLines.length == 0)
 					{
-						//If checking current position, skip
-						if(pos_comp!=pos_cur)
+						break;
+					}
+				}
+				//If there is still lines to check
+				if (sigmetReqLines.length > 1)
+				{
+					//Discard trailing lines that are not SIGMET
+					
+					//Check if last entry is a Sigmet or not
+					if (sigmetReqLines[sigmetReqLines.length-2].substr(0,2)== "No")
+					{
+						//Remove empty last line and no sigmet line
+						sigmetReqLines.pop();
+						sigmetReqLines.pop();
+					}
+					//Scan end of results to remove no sigmet lines
+					while (sigmetReqLines[sigmetReqLines.length-1].substr(0,2)== "No")
+					{
+						sigmetReqLines.pop();
+					}
+
+					var rawSigmet = new Array();
+
+					//While there is data to add
+					while (sigmetReqLines.length >= 1)
+					{
+						var sigmettext ="";
+						while (sigmetReqLines[0] !="")
 						{
-							//Check if it is the same letter and FIR
-							if ((curSigmetNumber.substr(0,1) == rawSigmet[pos_comp].substr(rawSigmet[pos_comp].indexOf('SIGMET')+7,1))
-								&& (curFIR == rawSigmet[pos_comp].substr(rawSigmet[pos_comp].indexOf('CZ'),4)))
+							sigmettext += sigmetReqLines[0];
+							sigmettext += " <br> ";
+							sigmetReqLines.shift();
+						}
+						//Delete the empty line that remain
+						sigmetReqLines.shift();
+
+						//Check if sigmet is domestic format if not, discard
+						if (sigmettext.substr(4,2) >= 20)
+							//Add Sigmet to array
+							rawSigmet.push(sigmettext);
+					
+					}
+
+					//Scan for duplicates and cancellation and remove old data
+					var pos_cur = 0;
+					while (pos_cur < rawSigmet.length)
+					{
+						//Check if it is a Cancel, if so remove it, if not, check for newet
+						if (rawSigmet[pos_cur].indexOf('CNCL') >= 0)
+							rawSigmet.splice(pos_cur,1);
+						else
+						{
+								
+							//Extract letter and number of the Sigmet
+							var curSigmetNumber = rawSigmet[pos_cur].substr(rawSigmet[pos_cur].indexOf('SIGMET')+7,2);
+							var curFIR = rawSigmet[pos_cur].substr(rawSigmet[pos_cur].indexOf('CZ'),4);
+			
+							//Scan the remainder of Sigmet for newer, we only look at those after the current line, the others are already newest
+							for (pos_comp=0;pos_comp < (rawSigmet.length);pos_comp++)
 							{
-								//Check if date is higher
-								
-								
-								//if (curSigmetNumber.substr(1,1) >= rawSigmet[pos_comp].substr(rawSigmet[pos_comp].indexOf('SIGMET')+8,1))
-								
-								var current = rawSigmet[pos_cur];
-								var compare = rawSigmet[pos_comp];
-
-								var date_current = extractExpiration(current).substr(0,2);
-								var date_compare =  extractExpiration(compare).substr(0,2);
-
-								var time_current = extractExpiration(current).substr(2,4);
-								var time_compare = extractExpiration(compare).substr(2,4);
-
-								
-								//Check if date is more recent
-								 
-								if (
-										//Currect date is lower 
-										(date_current > date_compare)
-										
-										//If we skip a month, we assume there will never be data for a whole month in the input data
-										| ((date_current < 10) && (date_compare > 20))
-										//Date is same and time is later
-										| (date_current == date_compare) && (time_current > time_compare)
-									)
-									//current is higher so we remove the other one
-									rawSigmet.splice(pos_comp,1);
-								else
+								//If checking current position, skip
+								if(pos_comp!=pos_cur)
 								{
-									//current is older, remove it
-									rawSigmet.splice(pos_cur,1);
-									//Nullify pos_cur++ after loop to remain at current position in rawSigmet since we removed and entry
-									pos_cur--;
-									break;
+									//Check if it is the same letter and FIR
+									if ((curSigmetNumber.substr(0,1) == rawSigmet[pos_comp].substr(rawSigmet[pos_comp].indexOf('SIGMET')+7,1))
+										&& (curFIR == rawSigmet[pos_comp].substr(rawSigmet[pos_comp].indexOf('CZ'),4)))
+									{
+										//Check if date is higher
+										
+										
+										//if (curSigmetNumber.substr(1,1) >= rawSigmet[pos_comp].substr(rawSigmet[pos_comp].indexOf('SIGMET')+8,1))
+										
+										var current = rawSigmet[pos_cur];
+										var compare = rawSigmet[pos_comp];
+
+										var date_current = extractExpiration(current).substr(0,2);
+										var date_compare =  extractExpiration(compare).substr(0,2);
+
+										var time_current = extractExpiration(current).substr(2,4);
+										var time_compare = extractExpiration(compare).substr(2,4);
+
+										
+										//Check if date is more recent
+										 
+										if (
+												//Currect date is lower 
+												(date_current > date_compare)
+												
+												//If we skip a month, we assume there will never be data for a whole month in the input data
+												| ((date_current < 10) && (date_compare > 20))
+												//Date is same and time is later
+												| (date_current == date_compare) && (time_current > time_compare)
+											)
+											//current is higher so we remove the other one
+											rawSigmet.splice(pos_comp,1);
+										else
+										{
+											//current is older, remove it
+											rawSigmet.splice(pos_cur,1);
+											//Nullify pos_cur++ after loop to remain at current position in rawSigmet since we removed and entry
+											pos_cur--;
+											break;
+										}
+									}
 								}
 							}
+							pos_cur++;
 						}
 					}
-					pos_cur++;
-				}
-			}
 
-			
-			//Remove waiting header and add SIGMET that remains to the display
-			sigmetDiv.children('p').remove();
-			sigmetDiv.children('h3').empty().append('Select SIGMET to plot...');
-			
-			for (cpt =0;cpt<rawSigmet.length;cpt++)
-			{		
-				sigmetDiv.append('<p class=\'active\'>' + rawSigmet[cpt] + '<br></p>');
-			}
-			
-			//Add click binding
-			sigmetDiv.children('p.active').css('cursor','pointer').bind('click',
-					function(){
-						autoPlotSigmet(this);
-					});
-			
-	   	});
+				
+					//Remove waiting header and add SIGMET that remains to the display
+					sigmetDiv.children('p').remove();
+					sigmetDiv.children('h3').empty().append('Select SIGMET to plot...');
+					
+									
+					for (cpt =0;cpt<rawSigmet.length;cpt++)
+					{		
+						sigmetDiv.append('<p class=\'active\'>' + rawSigmet[cpt] + '<br></p>');
+					}
+					
+					//Add click binding
+					sigmetDiv.children('p.active').css('cursor','pointer').bind('click',
+							function(){
+								autoPlotSigmet(this);
+							});
+				}
+				//There is no Sigmet to display
+				else
+				{
+					sigmetDiv.children('p').remove();
+					sigmetDiv.append('<p class=\'active\'>No Sigmet to display<br></p>');
+				}
+					
+			})
+			.fail(function( jqxhr, textStatus, error){
+				alert(testStatus + " " + error);
+			});
 	}
 
 </script>
