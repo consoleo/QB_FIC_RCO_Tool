@@ -413,53 +413,62 @@
      *
      * @throws [NumberFormatException] If invalid coordinate data exists.
      */
-    function prepareMap() {
+    function prepareMap() 
+	{
+	
       // Generate a list of all RCO's to start.
       var rcoList = [];
       rcoList = NORD.concat(SUD);
 
-      for(var i = 0; i < rcoList.length; ++i) {
-        var rcoVar = window[rcoList[i]];
-        // Generate marker URL.
-        var iconURL = MARKER_BASE_URL.replace('FFFFFF', MARKER_COLOUR) +
-              rcoList[i];
-        // Try to parse the coordinates and catch any exceptions, also strip
-        // trailing cardinal points off coordinates which are only included in
-        // global constant for readability of non-programmers.
-        try {
-          var lat = parseCoord(rcoVar[1].slice(0, -1));
-          // Longitude will be a westing, so negate.
-          var lng = 0 - parseCoord(rcoVar[2].slice(0, -1));
-          var markerCoords = new google.maps.LatLng(lat, lng);
-        }
-        catch(e) {
-          throw(e);
-        }
-        // Plot the marker.
-        var marker = new google.maps.Marker({
-          map: myMap,
-          position: markerCoords,
-          title: rcoList[i] + " RCO - " + rcoVar[0],
-          icon: iconURL,
-          zIndex: 1
-        });
+		//Generate marker URL and init coords and add it to golbal vars
+      for(var i = 0; i < rcoList.length; ++i) 
+		{
+			var rcoVar = window[rcoList[i]];
+			
+			// Generate marker URL.
+			var iconURL = MARKER_BASE_URL.replace('FFFFFF', MARKER_COLOUR) +rcoList[i];
+			
+			
+			// Try to parse the coordinates and catch any exceptions, also strip
+			// trailing cardinal points off coordinates which are only included in
+			// global constant for readability of non-programmers.
+			try 
+			{
+			  var lat = parseCoord(rcoVar[1].slice(0, -1));
+			  // Longitude will be a westing, so negate.
+			  var lng = 0 - parseCoord(rcoVar[2].slice(0, -1));
+			  var markerCoords = new google.maps.LatLng(lat, lng);
+			}
+			catch(e) {
+			  throw(e);
+			}
+			
+			
+			// Plot the marker.
+			var marker = new google.maps.Marker({
+			  map: myMap,
+			  position: markerCoords,
+			  title: rcoList[i] + " RCO - " + rcoVar[0],
+			  icon: iconURL,
+			  zIndex: 1
+			});
 
-        // Add the marker to the global variables.
-        rcoVar.push(marker);
-        markerVars.push(marker);
+			// Add the marker to the global variables.
+			rcoVar.push(marker);
+			markerVars.push(marker);
 
-        // Draw the ring.
-        var rcoCircle = new google.maps.Circle({
-          map: myMap,
-          center: markerCoords,
-          radius: getRadius($('#ring_radius')),
-          clickable: false,
-          geodesic: true,
-          fillOpacity:0.05,
-          zIndex: 1
-        });
+			// Draw the ring.
+			var rcoCircle = new google.maps.Circle({
+			  map: myMap,
+			  center: markerCoords,
+			  radius: getRadius($('#ring_radius')),
+			  clickable: false,
+			  geodesic: true,
+			  fillOpacity:0.05,
+			  zIndex: 1
+			});
 
-        rcoVar.push(rcoCircle);
+			rcoVar.push(rcoCircle);
       }
     }
 
@@ -489,19 +498,19 @@
      */
     function createCheckboxList() {
       // Set up initial frequently-used DOM selectors.
-      var north2 = $('#north2');
-      var south2 = $('#south2');
+      var northBoxes = $('#north_checkboxes');
+      var southBoxes = $('#south_checkboxes');
 
       // Loop through each of the sectors defined in the groups above, adding
       // a checkbox to the DOM.
       try {
         for(var i = 0; i < SUD.length; ++i) {
           var domElement = createCheckbox(SUD[i]);
-          south2.append(domElement);
+          southBoxes.append(domElement);
           }
         for(var i = 0; i < NORD.length; ++i) {
           var domElement = createCheckbox(NORD[i]);
-          north2.append(domElement);
+          northBoxes.append(domElement);
         }
       }
       catch(e) {
@@ -518,7 +527,7 @@
 
       // Get the list of all RCO's
       var rcoList = [];
-      //rcoList = NORTH_TWO_SECTOR.concat(SOUTH_TWO_SECTOR);
+
       rcoList = NORD.concat(SUD);
       
       // Set the radius of each ring.
@@ -537,7 +546,7 @@
      */
     function verifyCheckboxes() {
       // Check north checkbox.
-      if($('#north2:visible :checkbox')
+      if($('#north_checkboxes:visible :checkbox')
           .not(':checked').length != 0) {
         $('#north').removeAttr('checked');
       }
@@ -545,7 +554,7 @@
         $('#north').attr('checked', 'checked');
       }
       // Check south checkbox.
-      if($('#south2:visible :checkbox')
+      if($('#south_checkboxes:visible :checkbox')
           .not(':checked').length != 0) {
         $('#south').removeAttr('checked');
       }
@@ -554,22 +563,6 @@
       }
     }
 
-    /*
-     * Displays the mission based on the status of various DOM elements.
-     */
-    function selectMission() {
-      if($('#mission_select > :radio:checked').attr('id') == 'select_three_sector') 
-      {
-    	$('.three_sectors').removeClass('hidden');
-        $('.two_sectors').addClass('hidden');
-         
-      }
-      else {
-    	  $('.three_sectors').addClass('hidden');
-          $('.two_sectors').removeClass('hidden');
-      }
-      verifyCheckboxes();
-    }
 
     /*
      * Hide or displays the RCO map information and ensures the RCO checkbox
@@ -580,14 +573,17 @@
     function toggleBox(rcoBox) {
       // Extract RCO name.
       var rco = $(rcoBox).parent().text().substr(0, 2);
+	  
       // Make a copy of the global RCO variable.
       var rcoData = window[rco];
+	  
       // If user checked the RCO.
       if(rcoBox.is(':checked')) {
         // Check all boxes for that RCO across all missions.
         var rcoName = $(rcoBox).attr('name');
         $('[name=' + $(rcoBox).attr('name') + ']').attr('checked', 'checked');
-        // Show the ring and the marker, in case it was off.
+        
+		// Show the ring and the marker, in case it was off.
         rcoData[rcoData.length - 1].setMap(myMap);
         if(rcoData[rcoData.length - 2].getMap() == null) {
           rcoData[rcoData.length - 2].setMap(myMap);
@@ -614,14 +610,16 @@
      * @param mission [jQuery object] The checkbox to consider.
      */
     function toggleMission(mission) {
+	
       // missionCheckboxes will hold the mission's checkboxes.
       var missionCheckboxes;
+	  
       if(mission.attr('id') == 'north') {
-        missionCheckboxes = $('#north2 :visible:checkbox,');
+        missionCheckboxes = $('#north_checkboxes :visible:checkbox,');
       }
       // If not north or central, must be south.
       else {
-        missionCheckboxes = $('#south2 :visible:checkbox');
+        missionCheckboxes = $('#south_checkboxes :visible:checkbox');
       }
 
       // If the user checked the box.
@@ -2053,8 +2051,8 @@
         change: function(event, ui) {
           var newType = $(ui.newContent).attr('id');
           // Calculations are only needed with sigmets, pireps and notams.
-          if(newType == 'sigmets' || newType == 'pireps' ||
-              newType == 'notams') {
+          if(newType == 'sigmets' || newType == 'pireps' || newType == 'notams') 
+		  {
             var newTypeTabs = newType.slice(0, -1) + '_tabs';
             // If there are no tabs, reset markers to defaults.
             if($('#' + newType).find('.ui-tabs-panel:not(.ui-tabs-hide)')
@@ -2080,14 +2078,14 @@
               }
             }
           }
-          // Otherwise RCO selection or theme picker was selected and markers
+          
+		  // Otherwise RCO selection or theme picker was selected and markers
           // should be set to default.
           else {
             calcBcast(null);
           }
         }
       });
-      //$('#theme_roller').themeswitcher({loadTheme:'Cupertino'});
 
       // Keep right-panel accordian sized properly when window is resized and
       // ensure title and disclaimer are realigned.
@@ -2141,10 +2139,13 @@
       $('#modal_help').tabs();
 
       // Create other triggers and actions.
-      $('#mission_select > :radio').change(selectMission);
-      $('.mission').bind('click', function() {
-        toggleMission($(this));
-      });
+	  
+	  //Check and uncheck all RCO on mission checkbox click
+	  $('#north').bind('click', function () { toggleMission($(this))});
+	  $('#south').bind('click', function () { toggleMission($(this))});
+	  
+	  
+	  
       $('.rco_box').bind('click', function() {
         toggleBox($(this));
       });
@@ -2184,53 +2185,30 @@
   <div id="left_panel" class="left_panel"></div>
   <div id="right_panel" class="right_panel ui-widget-content">
     <h2><a href="#">RCO and Mission Selection</a></h2>
+	
     <div id="rco_configuration">
-      <FORM class="center radio_button hidden" id=mission_select autocomplete="off">
-			<INPUT id=select_three_sector type=radio CHECKED name=mission > 
-				<LABEL for=select_three_sector></LABEL>
-				 
-			<INPUT id=select_two_sector type=radio name=mission> 
-				<LABEL for=select_two_sector></LABEL>
-		</FORM>
+
 		
 		<FORM class="center top_margin" id=radius>
 			<INPUT id=ring_radius onfocus=this.select() size=3> NM Rings
 			<BUTTON class=top_margin id=reset_rings>Reset</BUTTON> 
 		</FORM>
 		
+		
+		<!-- Container for North Checkboxes -->
 		<INPUT class=mission id=north type=checkbox CHECKED> 
-		
 		<LABEL for=north>North</LABEL>
+		<div class=rco_boxes id=north_checkboxes></div>
 		
 		
-		<DIV class=three_sectors>
-			<DIV class=rco_boxes id=north2></DIV>
-		</DIV>
-
-		<DIV class="two_sectors hidden">
-			<DIV class=rco_boxes id=north2></DIV>
-		</DIV> 
-		
-		<DIV class=three_sectors>
-			<DIV class=rco_boxes id=central3></DIV>
-		</DIV>
-		
+		<!-- Container for south checkboxes -->
 		<INPUT class=mission id=south type=checkbox CHECKED> 
 		<LABEL for=south>South</LABEL> 
+		<div class=rco_boxes id=south_checkboxes></div>
 
-		<DIV class=three_sectors>
-			<DIV class=rco_boxes id=south2></DIV>
-		</DIV>
-
-		<DIV class="two_sectors hidden">
-			<DIV class=rco_boxes id=south2></DIV>
-		</DIV>
-
-		<DIV class="center top_margin hidden">
-			<INPUT class=button id=hide_markers type=checkbox> 
-			<LABEL for=hide_markers>Hide Markers</LABEL> 
-		</DIV>
     </div>
+	
+	
     <h2><a href="#">SIGMETs</a></h2>
     <div id="sigmets">
       <button id="add_sigmet" class="bottom_margin add_tab">New SIGMET</button>
@@ -2240,7 +2218,8 @@
         </ul>
       </div>
     </div>
-    <h2><a href="#">PIREPs</a></h2>
+    
+	<h2><a href="#">PIREPs</a></h2>
     <div id="pireps">
       <button id="add_pirep" class="bottom_margin add_tab">New PIREP</button>
       <div id="pirep_tabs_div" class="tabs">
@@ -2248,7 +2227,8 @@
         </ul>
       </div>
     </div>
-    <h2><a href="#">NOTAMs</a></h2>
+    
+	<h2><a href="#">NOTAMs</a></h2>
     <div id="notams">
       <button id="add_notam" class="bottom_margin add_tab">New NOTAM</button>
       <div id="notam_tabs_div" class="tabs">
@@ -2256,15 +2236,14 @@
         </ul>
       </div>
     </div>
-    <h2><a href="#">Help</a></h2>
+    
+	<h2><a href="#">Help</a></h2>
     <div id="help">
       <button id="show_help">Show Help</button>
     </div>
-    <h2><a href="#">Change Theme</a></h2>
-    <div id="change_theme">
-      <div id="theme_roller"></div>
-    </div>
+    
   </div>
+  
   <div id="title">
     <h1>FIC RCO MAP</h1>
     <h3>All information approximate</h3>
