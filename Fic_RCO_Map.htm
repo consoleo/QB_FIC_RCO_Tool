@@ -252,12 +252,8 @@
     var markerVars = [];
 </script>
 
-<<<<<<< Updated upstream
 
 <!-- Coord processing functions -->
-=======
-<!-- Coords functions -->
->>>>>>> Stashed changes
 <script type="text/javascript">
     // Extends Numbers type to convert numeric degrees to radians.
     if (typeof(Number.prototype.toRad) === 'undefined') {
@@ -409,7 +405,6 @@
 
 </script>
 
-<<<<<<< Updated upstream
 <!-- Maps and UI related functions -->
 <script type="text/javascript">
     /*
@@ -475,11 +470,6 @@
 			rcoVar.push(rcoCircle);
       }
     }
-=======
-<!-- Visual elements functions -->
-<script type="text/javascript">
-
->>>>>>> Stashed changes
 
     /*
      * Creates the DOM checkbox for a given RCO.
@@ -626,7 +616,7 @@
       if(mission.attr('id') == 'north') {
         missionCheckboxes = $('#north_checkboxes :visible:checkbox,');
       }
-      // If not north must be south.
+      // If not north or central, must be south.
       else {
         missionCheckboxes = $('#south_checkboxes :visible:checkbox');
       }
@@ -647,10 +637,6 @@
       }
     }
 
-</script>
-
-<!-- Tab functions -->
-<script type="text/javascript">
     /*
      * Creates initial tab areas and establishes parameters for new tab
      * creation.
@@ -809,35 +795,6 @@
     	
     }
 	
-<<<<<<< Updated upstream
-=======
-	    /*
-     * Resets the input tab to default values, or to the previous values if
-     * the tab had been submitted before.
-     *
-     * @param tab [jQuery Object] The active tab.
-     * @param inputType [String] Either 'sigmet', 'pirep' or 'notam'.
-     */
-    function resetInput(tab, inputType) {
-      var tabID = $(tab).attr('id');
-      // If a backup exists, reset to that data.
-      if($('#backup-' + tabID).length) {
-        var parent = $(tab).parent();
-        $(tab).empty();
-        $('#backup-' + tabID).children().clone(true).appendTo(tab);
-      }
-      // Otherwise reset to defaults.
-      else {
-        // Empty text fields.
-        $(tab).find(':text').val('');
-        // Set the radius to 0.
-        $(tab).find('[name=sigmet_radius]').val('0');
-        // Uncheck all checkboxes.
-        $(tab).find(':checkbox').removeAttr('checked');
-      }
-    }
-
->>>>>>> Stashed changes
     /*
      * Hides the plotted data for the supplied tab.
      *
@@ -964,7 +921,6 @@
         addCoordEntry($(this));
       });
     }
-<<<<<<< Updated upstream
     /*
      * Extracts input data from the DOM elements.
      *
@@ -1068,12 +1024,6 @@
         callback(extractedCoords);
       }
     }
-=======
-</script>
-
-<!-- Sigmet Autoload functions -->
-<script type="text/javasctipt">
->>>>>>> Stashed changes
 
 </script>
 
@@ -1361,18 +1311,11 @@
 				alert(testStatus + " " + error);
 			});
 	}
-</script>
 
-<<<<<<< Updated upstream
 </script>
 
 <!-- Calculations functions -->
 <script type="text/javascript">	
-=======
-<!-- Coords and related calculations functions -->
-<script type="text/javasctipt">
-	
->>>>>>> Stashed changes
 	
     /*
      * Determines if a point is within a polygon. Based on the PNPOLY FORTRAN
@@ -1633,10 +1576,6 @@
         }
       });
     }
-</script>
-
-<!-- Plot functions -->
-<script type="text/javasctipt">
 
 </script>
 
@@ -2060,66 +1999,7 @@
 </script>
 
 <!-- Init functions -->
-<<<<<<< Updated upstream
 <script type="text/javascript">
-=======
-<script type="text/javasctipt">
-    /*
-     * Creates the markers and draws RCO rings.
-     *
-     * @throws [NumberFormatException] If invalid coordinate data exists.
-     */
-    function prepareMap() {
-      // Generate a list of all RCO's to start.
-      var rcoList = [];
-      rcoList = NORD.concat(SUD);
-
-      for(var i = 0; i < rcoList.length; ++i) {
-        var rcoVar = window[rcoList[i]];
-        // Generate marker URL.
-        var iconURL = MARKER_BASE_URL.replace('FFFFFF', MARKER_COLOUR) +
-              rcoList[i];
-        // Try to parse the coordinates and catch any exceptions, also strip
-        // trailing cardinal points off coordinates which are only included in
-        // global constant for readability of non-programmers.
-        try {
-          var lat = parseCoord(rcoVar[1].slice(0, -1));
-          // Longitude will be a westing, so negate.
-          var lng = 0 - parseCoord(rcoVar[2].slice(0, -1));
-          var markerCoords = new google.maps.LatLng(lat, lng);
-        }
-        catch(e) {
-          throw(e);
-        }
-        // Plot the marker.
-        var marker = new google.maps.Marker({
-          map: myMap,
-          position: markerCoords,
-          title: rcoList[i] + " RCO - " + rcoVar[0],
-          icon: iconURL,
-          zIndex: 1
-        });
-
-        // Add the marker to the global variables.
-        rcoVar.push(marker);
-        markerVars.push(marker);
-
-        // Draw the ring.
-        var rcoCircle = new google.maps.Circle({
-          map: myMap,
-          center: markerCoords,
-          radius: getRadius($('#ring_radius')),
-          clickable: false,
-          geodesic: true,
-          fillOpacity:0.05,
-          zIndex: 1
-        });
-
-        rcoVar.push(rcoCircle);
-      }
-    }
-
->>>>>>> Stashed changes
     /*
      * Initializes the application by loading the map and assets, configuring
      * listeners and setting up the UI.
@@ -2259,8 +2139,6 @@
 
       // Create other triggers and actions.
 	  
-	  $('#hide_all_marker').bind('click',function() {alert("To be implemented!!"); });
-	  
 	  //Check and uncheck all RCO on mission checkbox click
 	  $('#north').bind('click', function () { toggleMission($(this))});
 	  $('#south').bind('click', function () { toggleMission($(this))});
@@ -2277,7 +2155,9 @@
       $('.add_tab').bind('click', function() {
         addTab($(this).parent());
       });  
-
+      $('.add_predef').bind('click',function(){
+    	  addPredef($(this).parent());
+      });
       $('.tabs').on('click', 'span.ui-icon-close', function() {
         var tabs = $(this).parents('.tabs');
         var index = $('li', $(tabs)).index($(this).parent());
@@ -2324,14 +2204,6 @@
 		<INPUT class=mission id=south type=checkbox CHECKED> 
 		<LABEL for=south>South</LABEL> 
 		<div class=rco_boxes id=south_checkboxes></div>
-		
-		<div class="center top_margin">
-			<input class=button id=hide_markers type=checkbox>
-			<label for=hide_markers>Hide Markers</label>
-			
-			<input class=button id=hide_all_marker type=button>
-			<label for=hide_all_marker>Hide all Markers</label>
-		</div>
 
     </div>
 	
