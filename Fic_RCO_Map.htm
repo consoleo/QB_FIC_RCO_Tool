@@ -1154,13 +1154,13 @@
  	function autoSigmet()
 	{
 	    // Add loading notification
-	    var filename = 'http://whateverorigin.org/get?url=http://aviationweather.gov/data/iffdp/6440.txt&callback=?';
+	    var filename = 'http://whateverorigin.org/get?url='+ encodeURIComponent('http://aviationweather.gov/data/iffdp/6440.txt')+'&callback=?';
 	    var sigmetDiv = $('#modal_sigmet');
 	    sigmetDiv.dialog('open');
 	    sigmetDiv.append('<p>Loading data, please wait...</p>');
 	    
 	    // Load the file containing SIGMET data from NOAA and put it in a JSON array
-	    $.getJSON(filename) 
+	    $.getJSON(filename)		
 			.done(function(data){  
 				var sigmetReqLines = data.contents.split("\n");
 
@@ -1307,8 +1307,10 @@
 				}
 					
 			})
+			
 			.fail(function( jqxhr, textStatus, error){
-				alert(testStatus + " " + error);
+				alert(textStatus + " " + error);
+				
 			});
 	}
 
