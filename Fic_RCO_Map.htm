@@ -3,13 +3,10 @@
   <meta http-equiv="content-type" content="text/html; charset=utf-8" />
   <title>FIC RCO Map</title>
 
-  <!--
-
-                  RCO Radio Map v2.2 BETA
+  <!--RCO Radio Map v2.2 BETA
 
       Coded by:       Darren Johnston (johdarr@navcanada.ca)
 						Modified by Michael Simard for YQB FIC (simarmi@navcanada.ca)      					
-      Last modified:  11 March 2013
       					
       
       Uses:           Google Maps Api v3.x
@@ -258,6 +255,8 @@
     var markerVars = [];
 </script>
 
+
+<!-- Coord processing functions -->
 <script type="text/javascript">
     // Extends Numbers type to convert numeric degrees to radians.
     if (typeof(Number.prototype.toRad) === 'undefined') {
@@ -407,58 +406,71 @@
       }
     }
 
+</script>
+
+<!-- Maps and UI related functions -->
+<script type="text/javascript">
     /*
      * Creates the markers and draws RCO rings.
      *
      * @throws [NumberFormatException] If invalid coordinate data exists.
      */
-    function prepareMap() {
+    function prepareMap() 
+	{
+	
       // Generate a list of all RCO's to start.
       var rcoList = [];
       rcoList = NORD.concat(SUD);
 
-      for(var i = 0; i < rcoList.length; ++i) {
-        var rcoVar = window[rcoList[i]];
-        // Generate marker URL.
-        var iconURL = MARKER_BASE_URL.replace('FFFFFF', MARKER_COLOUR) +
-              rcoList[i];
-        // Try to parse the coordinates and catch any exceptions, also strip
-        // trailing cardinal points off coordinates which are only included in
-        // global constant for readability of non-programmers.
-        try {
-          var lat = parseCoord(rcoVar[1].slice(0, -1));
-          // Longitude will be a westing, so negate.
-          var lng = 0 - parseCoord(rcoVar[2].slice(0, -1));
-          var markerCoords = new google.maps.LatLng(lat, lng);
-        }
-        catch(e) {
-          throw(e);
-        }
-        // Plot the marker.
-        var marker = new google.maps.Marker({
-          map: myMap,
-          position: markerCoords,
-          title: rcoList[i] + " RCO - " + rcoVar[0],
-          icon: iconURL,
-          zIndex: 1
-        });
+		//Generate marker URL and init coords and add it to golbal vars
+      for(var i = 0; i < rcoList.length; ++i) 
+		{
+			var rcoVar = window[rcoList[i]];
+			
+			// Generate marker URL.
+			var iconURL = MARKER_BASE_URL.replace('FFFFFF', MARKER_COLOUR) +rcoList[i];
+			
+			
+			// Try to parse the coordinates and catch any exceptions, also strip
+			// trailing cardinal points off coordinates which are only included in
+			// global constant for readability of non-programmers.
+			try 
+			{
+			  var lat = parseCoord(rcoVar[1].slice(0, -1));
+			  // Longitude will be a westing, so negate.
+			  var lng = 0 - parseCoord(rcoVar[2].slice(0, -1));
+			  var markerCoords = new google.maps.LatLng(lat, lng);
+			}
+			catch(e) {
+			  throw(e);
+			}
+			
+			
+			// Plot the marker.
+			var marker = new google.maps.Marker({
+			  map: myMap,
+			  position: markerCoords,
+			  title: rcoList[i] + " RCO - " + rcoVar[0],
+			  icon: iconURL,
+			  zIndex: 1
+			});
 
-        // Add the marker to the global variables.
-        rcoVar.push(marker);
-        markerVars.push(marker);
+			// Add the marker to the global variables.
+			rcoVar.push(marker);
+			markerVars.push(marker);
 
-        // Draw the ring.
-        var rcoCircle = new google.maps.Circle({
-          map: myMap,
-          center: markerCoords,
-          radius: getRadius($('#ring_radius')),
-          clickable: false,
-          geodesic: true,
-          fillOpacity:0.05,
-          zIndex: 1
-        });
+			// Draw the ring.
+			var rcoCircle = new google.maps.Circle({
+			  map: myMap,
+			  center: markerCoords,
+			  radius: getRadius($('#ring_radius')),
+			  clickable: false,
+			  geodesic: true,
+			  fillOpacity:0.05,
+			  zIndex: 1
+			});
 
-        rcoVar.push(rcoCircle);
+			rcoVar.push(rcoCircle);
       }
     }
 
@@ -488,19 +500,19 @@
      */
     function createCheckboxList() {
       // Set up initial frequently-used DOM selectors.
-      var north2 = $('#north2');
-      var south2 = $('#south2');
+      var northBoxes = $('#north_checkboxes');
+      var southBoxes = $('#south_checkboxes');
 
       // Loop through each of the sectors defined in the groups above, adding
       // a checkbox to the DOM.
       try {
         for(var i = 0; i < SUD.length; ++i) {
           var domElement = createCheckbox(SUD[i]);
-          south2.append(domElement);
+          southBoxes.append(domElement);
           }
         for(var i = 0; i < NORD.length; ++i) {
           var domElement = createCheckbox(NORD[i]);
-          north2.append(domElement);
+          northBoxes.append(domElement);
         }
       }
       catch(e) {
@@ -517,7 +529,7 @@
 
       // Get the list of all RCO's
       var rcoList = [];
-      //rcoList = NORTH_TWO_SECTOR.concat(SOUTH_TWO_SECTOR);
+
       rcoList = NORD.concat(SUD);
       
       // Set the radius of each ring.
@@ -536,7 +548,7 @@
      */
     function verifyCheckboxes() {
       // Check north checkbox.
-      if($('#north2:visible :checkbox')
+      if($('#north_checkboxes:visible :checkbox')
           .not(':checked').length != 0) {
         $('#north').removeAttr('checked');
       }
@@ -544,7 +556,7 @@
         $('#north').attr('checked', 'checked');
       }
       // Check south checkbox.
-      if($('#south2:visible :checkbox')
+      if($('#south_checkboxes:visible :checkbox')
           .not(':checked').length != 0) {
         $('#south').removeAttr('checked');
       }
@@ -553,22 +565,6 @@
       }
     }
 
-    /*
-     * Displays the mission based on the status of various DOM elements.
-     */
-    function selectMission() {
-      if($('#mission_select > :radio:checked').attr('id') == 'select_three_sector') 
-      {
-    	$('.three_sectors').removeClass('hidden');
-        $('.two_sectors').addClass('hidden');
-         
-      }
-      else {
-    	  $('.three_sectors').addClass('hidden');
-          $('.two_sectors').removeClass('hidden');
-      }
-      verifyCheckboxes();
-    }
 
     /*
      * Hide or displays the RCO map information and ensures the RCO checkbox
@@ -579,14 +575,17 @@
     function toggleBox(rcoBox) {
       // Extract RCO name.
       var rco = $(rcoBox).parent().text().substr(0, 2);
+	  
       // Make a copy of the global RCO variable.
       var rcoData = window[rco];
+	  
       // If user checked the RCO.
       if(rcoBox.is(':checked')) {
         // Check all boxes for that RCO across all missions.
         var rcoName = $(rcoBox).attr('name');
         $('[name=' + $(rcoBox).attr('name') + ']').attr('checked', 'checked');
-        // Show the ring and the marker, in case it was off.
+        
+		// Show the ring and the marker, in case it was off.
         rcoData[rcoData.length - 1].setMap(myMap);
         if(rcoData[rcoData.length - 2].getMap() == null) {
           rcoData[rcoData.length - 2].setMap(myMap);
@@ -596,7 +595,6 @@
       else {
         // Uncheck all boxes for that RCO across all missions.
         var rcoName = $(rcoBox).attr('name');
-        //alert(rcoName);
         $('[name=' + $(rcoBox).attr('name') + ']').removeAttr('checked');
         rcoData[rcoData.length - 1].setMap(null);
         // If markers are set to hide, hide that as well.
@@ -614,14 +612,16 @@
      * @param mission [jQuery object] The checkbox to consider.
      */
     function toggleMission(mission) {
+	
       // missionCheckboxes will hold the mission's checkboxes.
       var missionCheckboxes;
+	  
       if(mission.attr('id') == 'north') {
-        missionCheckboxes = $('#north2 :visible:checkbox,');
+        missionCheckboxes = $('#north_checkboxes :visible:checkbox,');
       }
-      // If not north or central, must be south.
+      // If not north, must be south.
       else {
-        missionCheckboxes = $('#south2 :visible:checkbox');
+        missionCheckboxes = $('#south_checkboxes :visible:checkbox');
       }
 
       // If the user checked the box.
@@ -797,91 +797,7 @@
     	return counter;
     	
     }
-    function parseXml(xml,status,section){
-		//Fetch Sigmets from file
-        $(xml).find('Sigmet').each(function(){
-        
-        	var cnts = countTab(section);
-        	
-	        //add a tab to put it into
-	        addTab($(section));
-	        	
-	        //Hold section for last tab 
-	        var curr_sect =  $(section).find($('#sigmet_new'+cnts));
-	        //Populate fields
-	        curr_sect.find($("input[name=sigmet_id]"))[0].value = $(this).find("Title").text();
-	        curr_sect.find($("input[name=sigmet_radius]"))[0].value = $(this).find("Radius").text();
-	        
-	        if($(this).find("Closed").text() == "1")
-	        	{var box  = curr_sect.find($("input[name=closed_area]"))[0]; $(box).attr('checked',true);}
-	        
-	        var cpt = 0;
-	        $(this).find("Coord").each(function(){
-	        	//if not first set of coords
-	        	if(cpt !=0)
-	        		addCoordEntry(curr_sect.find('form').find('fieldset').find('div.coordinate').last());
-	        	
-	        	var field_lat = curr_sect.find($("input[name=lat]"));
-	        	var field_long = curr_sect.find($("input[name=lng]"));
-	        	
-	        	//Transpose old coordinated up on line
-	        	for(var pos=1;pos < field_lat.length-1;pos++){
-	        		field_lat[pos].value = field_lat[pos+1].value;
-	        		field_long[pos].value = field_long[pos+1].value;
-	        	}
-	        		
-	        	//Populate new fields
-	        	field_lat[cpt].value = $(this).find("Lat").text();
-	        	field_long[cpt].value = $(this).find("Long").text();
-	        	cpt++;
-	   			
-	        })
-	        
-	        curr_sect.find("button[name=update]").click();
-    	});
-    	
-    }
-    
-    //Parse through a XML file and add predefined items (WS,UA)
-    function addPredef(section){
-    	
-    	$.ajax({
-            type: "GET",
-            url: "data.xml",
-            dataType: "xml",
-            success: function(xml,status){parseXml(xml,status,section);},
-            error: function() {
-            	alert("An error occurred while processing XML file.");
-            	}
-        });
-    		
-    }
-    /*
-     * Resets the input tab to default values, or to the previous values if
-     * the tab had been submitted before.
-     *
-     * @param tab [jQuery Object] The active tab.
-     * @param inputType [String] Either 'sigmet', 'pirep' or 'notam'.
-     */
-    function resetInput(tab, inputType) {
-      var tabID = $(tab).attr('id');
-      // If a backup exists, reset to that data.
-      if($('#backup-' + tabID).length) {
-        var parent = $(tab).parent();
-        $(tab).empty();
-        $('#backup-' + tabID).children().clone(true).appendTo(tab);
-      }
-      // Otherwise reset to defaults.
-      else {
-        // Empty text fields.
-        $(tab).find(':text').val('');
-        // Set the radius to 0.
-        $(tab).find('[name=sigmet_radius]').val('0');
-        // Uncheck all checkboxes.
-        $(tab).find(':checkbox').removeAttr('checked');
-      }
-    }
-
+	
     /*
      * Hides the plotted data for the supplied tab.
      *
@@ -918,6 +834,35 @@
       // Hide the "show" button and display the "hide" button.
       $(tab).find('[name=show]').addClass('hidden');
       $(tab).find('[name=hide]').removeClass('hidden');
+    }
+</script>
+
+<!-- Input related functions -->
+<script type="text/javascript">
+/*
+     * Resets the input tab to default values, or to the previous values if
+     * the tab had been submitted before.
+     *
+     * @param tab [jQuery Object] The active tab.
+     * @param inputType [String] Either 'sigmet', 'pirep' or 'notam'.
+     */
+    function resetInput(tab, inputType) {
+      var tabID = $(tab).attr('id');
+      // If a backup exists, reset to that data.
+      if($('#backup-' + tabID).length) {
+        var parent = $(tab).parent();
+        $(tab).empty();
+        $('#backup-' + tabID).children().clone(true).appendTo(tab);
+      }
+      // Otherwise reset to defaults.
+      else {
+        // Empty text fields.
+        $(tab).find(':text').val('');
+        // Set the radius to 0.
+        $(tab).find('[name=sigmet_radius]').val('0');
+        // Uncheck all checkboxes.
+        $(tab).find(':checkbox').removeAttr('checked');
+      }
     }
 
     /*
@@ -979,7 +924,114 @@
         addCoordEntry($(this));
       });
     }
+    /*
+     * Extracts input data from the DOM elements.
+     *
+     * @param tab [jQuery object] The active SIGMET tab.
+     * @param callback [Function] The callback function; takes extracted
+     *      coordinates as a parameter.
+     * @throws [String] If coordinate data does not match type of data input
+     *      or if coordinates are invalid.
+     */
+    function extractInput(tab, callback) {
+      // Start with an empty array.
+      var extractedCoords = [];
+      // Get the coordinate unput fields.
+      var inputData = $(tab).find('.coordinate');
+      // Iteratre over each set of coordinates input.
+      for(var i = 0; i < inputData.length; ++i) {
+        // Only extract data from the non-hidden input method.
+        var currCoord = $(inputData[i]).children('div:not(.hidden)');
+        // Processing varies depending on if coordinates are entered via
+        // coordinates or ICAO code.
+        if($(currCoord).hasClass('coord_entry')) {
+          // Extract coordinate and remove any spaces that may exist.
+          var lat = $(currCoord).find('[name=lat]').val().replace(' ', '');
+          var lng = $(currCoord).find('[name=lng]').val().replace(' ', '');
+          // Only process if both lat and lng are not blank, otherwise move on
+          // to the next set.
+          if(!(lat == '' && lng == '')) {
+            // If only one coordinate is empty or if either contains invalid
+            // input, throw an exception.
+            if(isNaN(lat) || isNaN(lng) || lat == '' || lng == '') {
+              throw('Coordinates contain invalid data.');
+            }
+            // If the number is in decimal format it will have a decimal.
+            if(lat.indexOf('.') != -1) {
+              // Only processing needed is to convert to float.
+              lat = +lat;
+            }
+            // Otherwise it's an integer and can be parsed.
+            else {
+              lat = parseCoord(lat);
+            }
+            // Do the same for lng.
+            if(lng.indexOf('.') != -1) {
+              lng = +lng;
+            }
+            else {
+              lng = parseCoord(lng);
+            }
+            // Assign new coordData object to the appropriate index.
+            // NB: This is done instead of push() because ICAO coords are
+            // retrieved asynchronously but the order must be maintained.
+            extractedCoords[i] = new coordData('coord', lat, lng);
+          }
+        }
+        // If it's not coordinate entry, it must be ICAO.
+        else {
+          // Extract bearing and range, remove all whitespace and forward
+          // slashes.
+          var brngRng = $(currCoord).find('[name=brng_rng]').val()
+              .replace(' ', '').replace('/', '');
+          var bearing, range;
+          // If the text box was empty, set it to 0.
+          if(brngRng == '') {
+            brngRng = 0;
+            bearing = 0;
+            range = 0;
+          }
+          // Otherwise extract the values.
+          else {
+            // brngRng must be at least 4 characters long.
+            if(brngRng.length < 4 && brngRng != 0) {
+              throw('Bearing/Range is not valid.');
+            }
+            // If brngRange isn't 0, extract bearing and range.
+            // NB: 1852m per NM
+            bearing = brngRng.substr(0, 3);
+            range = brngRng.slice(3) * 1852;
+            if(isNaN(bearing) || isNaN(range)) {
+              throw('Bearing/Range is not valid.');
+            }
+          }
+          // Extract ICAO code
+          var icaoCode = $(currCoord).find('[name=icao_ident]').val();
+          // If icaoCode is valid, it will be either 3 or 4 characters long.
+          if(icaoCode.length != 3 && icaoCode.length != 4) {
+            throw('Invalid location code.');
+          }
+          // If the length is 3, assume Canadian identifier and prepend a C.
+          if(icaoCode.length == 3) {
+            icaoCode = 'C' + icaoCode;
+          }
+          // Assign new coordData object to the appropriate index.
+          // NB: This is done instead of push() because ICAO coords are
+          // retrieved asynchronously but the order must be maintained.
+          extractedCoords[i] = new coordData('icao', bearing, range,
+              icaoCode);
+        }
+      }
+      // Execute the callback.
+      if(typeof callback == 'function') {
+        callback(extractedCoords);
+      }
+    }
 
+</script>
+
+<!-- Auto Sigmet functions -->
+<script type="text/javascript">
     /***********
 	/ Extract and return the expiration date and time from a SIGMET Text
 	*/
@@ -1111,139 +1163,164 @@
 	    sigmetDiv.append('<p>Loading data, please wait...</p>');
 	    
 	    // Load the file containing SIGMET data from NOAA and put it in a JSON array
-	    $.getJSON(filename, function(data){  
-	      	var sigmetReqLines = data.contents.split("\n");
+	    $.getJSON(filename)		
+			.done(function(data){  
+				var sigmetReqLines = data.contents.split("\n");
 
-	    	//Discard header that are not Sigmet
-			while (sigmetReqLines[0].substr(0,4) != "WSCN")
-			{
-				sigmetReqLines.shift();
-			}
-
-			//Discard trailing lines that are not SIGMET
-			
-			//Check if last entry is a Sigmet or not
-			if (sigmetReqLines[sigmetReqLines.length-2].substr(0,2)== "No")
-			{
-				//Remove empty last line and no sigmet line
-				sigmetReqLines.pop();
-				sigmetReqLines.pop();
-			}
-			//Scan end of results to remove no sigmet lines
-			while (sigmetReqLines[sigmetReqLines.length-1].substr(0,2)== "No")
-			{
-				sigmetReqLines.pop();
-			}
-
-			var rawSigmet = new Array();
-
-			//While ther is data to add
-			while (sigmetReqLines.length >= 1)
-			{
-				var sigmettext ="";
-				while (sigmetReqLines[0] !="")
+				//Discard header that are not Sigmet
+				while (sigmetReqLines[0].substr(0,4) != "WSCN")
 				{
-					sigmettext += sigmetReqLines[0];
-					sigmettext += " <br> ";
 					sigmetReqLines.shift();
-				}
-				//Delete the empty line that remain
-				sigmetReqLines.shift();
-
-				//Check if sigmet is domestic format if not, discard
-				if (sigmettext.substr(4,2) >= 20)
-					//Add Sigmet to array
-					rawSigmet.push(sigmettext);
-				
-			}
-
-			//Scan for duplicates and cancellation and remove old data
-			var pos_cur = 0;
-			while (pos_cur < rawSigmet.length)
-			{
-				//Check if it is a Cancel, if so remove it, if not, check for newet
-				if (rawSigmet[pos_cur].indexOf('CNCL') >= 0)
-					rawSigmet.splice(pos_cur,1);
-				else
-				{
-						
-					//Extract letter and number of the Sigmet
-					var curSigmetNumber = rawSigmet[pos_cur].substr(rawSigmet[pos_cur].indexOf('SIGMET')+7,2);
-					var curFIR = rawSigmet[pos_cur].substr(rawSigmet[pos_cur].indexOf('CZ'),4);
-	
-					//Scan the remainder of Sigmet for newer, we only look at those after the current line, the others are already newest
-					for (pos_comp=0;pos_comp < (rawSigmet.length);pos_comp++)
+					
+					//Stop the loop if array is empty
+					if (sigmetReqLines.length == 0)
 					{
-						//If checking current position, skip
-						if(pos_comp!=pos_cur)
+						break;
+					}
+				}
+				//If there is still lines to check
+				if (sigmetReqLines.length > 1)
+				{
+					//Discard trailing lines that are not SIGMET
+					
+					//Check if last entry is a Sigmet or not
+					if (sigmetReqLines[sigmetReqLines.length-2].substr(0,2)== "No")
+					{
+						//Remove empty last line and no sigmet line
+						sigmetReqLines.pop();
+						sigmetReqLines.pop();
+					}
+					//Scan end of results to remove no sigmet lines
+					while (sigmetReqLines[sigmetReqLines.length-1].substr(0,2)== "No")
+					{
+						sigmetReqLines.pop();
+					}
+
+					var rawSigmet = new Array();
+
+					//While there is data to add
+					while (sigmetReqLines.length >= 1)
+					{
+						var sigmettext ="";
+						while (sigmetReqLines[0] !="")
 						{
-							//Check if it is the same letter and FIR
-							if ((curSigmetNumber.substr(0,1) == rawSigmet[pos_comp].substr(rawSigmet[pos_comp].indexOf('SIGMET')+7,1))
-								&& (curFIR == rawSigmet[pos_comp].substr(rawSigmet[pos_comp].indexOf('CZ'),4)))
+							sigmettext += sigmetReqLines[0];
+							sigmettext += " <br> ";
+							sigmetReqLines.shift();
+						}
+						//Delete the empty line that remain
+						sigmetReqLines.shift();
+
+						//Check if sigmet is domestic format if not, discard
+						if (sigmettext.substr(4,2) >= 20)
+							//Add Sigmet to array
+							rawSigmet.push(sigmettext);
+					
+					}
+
+					//Scan for duplicates and cancellation and remove old data
+					var pos_cur = 0;
+					while (pos_cur < rawSigmet.length)
+					{
+						//Check if it is a Cancel, if so remove it, if not, check for newet
+						if (rawSigmet[pos_cur].indexOf('CNCL') >= 0)
+							rawSigmet.splice(pos_cur,1);
+						else
+						{
+								
+							//Extract letter and number of the Sigmet
+							var curSigmetNumber = rawSigmet[pos_cur].substr(rawSigmet[pos_cur].indexOf('SIGMET')+7,2);
+							var curFIR = rawSigmet[pos_cur].substr(rawSigmet[pos_cur].indexOf('CZ'),4);
+			
+							//Scan the remainder of Sigmet for newer, we only look at those after the current line, the others are already newest
+							for (pos_comp=0;pos_comp < (rawSigmet.length);pos_comp++)
 							{
-								//Check if date is higher
-								
-								
-								//if (curSigmetNumber.substr(1,1) >= rawSigmet[pos_comp].substr(rawSigmet[pos_comp].indexOf('SIGMET')+8,1))
-								
-								var current = rawSigmet[pos_cur];
-								var compare = rawSigmet[pos_comp];
-
-								var date_current = extractExpiration(current).substr(0,2);
-								var date_compare =  extractExpiration(compare).substr(0,2);
-
-								var time_current = extractExpiration(current).substr(2,4);
-								var time_compare = extractExpiration(compare).substr(2,4);
-
-								
-								//Check if date is more recent
-								 
-								if (
-										//Currect date is lower 
-										(date_current > date_compare)
-										
-										//If we skip a month, we assume there will never be data for a whole month in the input data
-										| ((date_current < 10) && (date_compare > 20))
-										//Date is same and time is later
-										| (date_current == date_compare) && (time_current > time_compare)
-									)
-									//current is higher so we remove the other one
-									rawSigmet.splice(pos_comp,1);
-								else
+								//If checking current position, skip
+								if(pos_comp!=pos_cur)
 								{
-									//current is older, remove it
-									rawSigmet.splice(pos_cur,1);
-									//Nullify pos_cur++ after loop to remain at current position in rawSigmet since we removed and entry
-									pos_cur--;
-									break;
+									//Check if it is the same letter and FIR
+									if ((curSigmetNumber.substr(0,1) == rawSigmet[pos_comp].substr(rawSigmet[pos_comp].indexOf('SIGMET')+7,1))
+										&& (curFIR == rawSigmet[pos_comp].substr(rawSigmet[pos_comp].indexOf('CZ'),4)))
+									{
+										//Check if date is higher
+										
+										
+										//if (curSigmetNumber.substr(1,1) >= rawSigmet[pos_comp].substr(rawSigmet[pos_comp].indexOf('SIGMET')+8,1))
+										
+										var current = rawSigmet[pos_cur];
+										var compare = rawSigmet[pos_comp];
+
+										var date_current = extractExpiration(current).substr(0,2);
+										var date_compare =  extractExpiration(compare).substr(0,2);
+
+										var time_current = extractExpiration(current).substr(2,4);
+										var time_compare = extractExpiration(compare).substr(2,4);
+
+										
+										//Check if date is more recent
+										 
+										if (
+												//Currect date is lower 
+												(date_current > date_compare)
+												
+												//If we skip a month, we assume there will never be data for a whole month in the input data
+												| ((date_current < 10) && (date_compare > 20))
+												//Date is same and time is later
+												| (date_current == date_compare) && (time_current > time_compare)
+											)
+											//current is higher so we remove the other one
+											rawSigmet.splice(pos_comp,1);
+										else
+										{
+											//current is older, remove it
+											rawSigmet.splice(pos_cur,1);
+											//Nullify pos_cur++ after loop to remain at current position in rawSigmet since we removed and entry
+											pos_cur--;
+											break;
+										}
+									}
 								}
 							}
+							pos_cur++;
 						}
 					}
-					pos_cur++;
-				}
-			}
 
+				
+					//Remove waiting header and add SIGMET that remains to the display
+					sigmetDiv.children('p').remove();
+					sigmetDiv.children('h3').empty().append('Select SIGMET to plot...');
+					
+									
+					for (cpt =0;cpt<rawSigmet.length;cpt++)
+					{		
+						sigmetDiv.append('<p class=\'active\'>' + rawSigmet[cpt] + '<br></p>');
+					}
+					
+					//Add click binding
+					sigmetDiv.children('p.active').css('cursor','pointer').bind('click',
+							function(){
+								autoPlotSigmet(this);
+							});
+				}
+				//There is no Sigmet to display
+				else
+				{
+					sigmetDiv.children('p').remove();
+					sigmetDiv.append('<p class=\'active\'>No Sigmet to display<br></p>');
+				}
+					
+			})
 			
-			//Remove waiting header and add SIGMET that remains to the display
-			sigmetDiv.children('p').remove();
-			sigmetDiv.children('h3').empty().append('Select SIGMET to plot...');
-			
-			for (cpt =0;cpt<rawSigmet.length;cpt++)
-			{		
-				sigmetDiv.append('<p class=\'active\'>' + rawSigmet[cpt] + '<br></p>');
-			}
-			
-			//Add click binding
-			sigmetDiv.children('p.active').css('cursor','pointer').bind('click',
-					function(){
-						autoPlotSigmet(this);
-					});
-			
-	   	});
+			.fail(function( jqxhr, textStatus, error){
+				alert(textStatus + " " + error);
+				
+			});
 	}
 
-	
+</script>
+
+<!-- Calculations functions -->
+<script type="text/javascript">	
 	
     /*
      * Determines if a point is within a polygon. Based on the PNPOLY FORTRAN
@@ -1348,109 +1425,6 @@
       }
     }
 
-    /*
-     * Extracts input data from the DOM elements.
-     *
-     * @param tab [jQuery object] The active SIGMET tab.
-     * @param callback [Function] The callback function; takes extracted
-     *      coordinates as a parameter.
-     * @throws [String] If coordinate data does not match type of data input
-     *      or if coordinates are invalid.
-     */
-    function extractInput(tab, callback) {
-      // Start with an empty array.
-      var extractedCoords = [];
-      // Get the coordinate unput fields.
-      var inputData = $(tab).find('.coordinate');
-      // Iteratre over each set of coordinates input.
-      for(var i = 0; i < inputData.length; ++i) {
-        // Only extract data from the non-hidden input method.
-        var currCoord = $(inputData[i]).children('div:not(.hidden)');
-        // Processing varies depending on if coordinates are entered via
-        // coordinates or ICAO code.
-        if($(currCoord).hasClass('coord_entry')) {
-          // Extract coordinate and remove any spaces that may exist.
-          var lat = $(currCoord).find('[name=lat]').val().replace(' ', '');
-          var lng = $(currCoord).find('[name=lng]').val().replace(' ', '');
-          // Only process if both lat and lng are not blank, otherwise move on
-          // to the next set.
-          if(!(lat == '' && lng == '')) {
-            // If only one coordinate is empty or if either contains invalid
-            // input, throw an exception.
-            if(isNaN(lat) || isNaN(lng) || lat == '' || lng == '') {
-              throw('Coordinates contain invalid data.');
-            }
-            // If the number is in decimal format it will have a decimal.
-            if(lat.indexOf('.') != -1) {
-              // Only processing needed is to convert to float.
-              lat = +lat;
-            }
-            // Otherwise it's an integer and can be parsed.
-            else {
-              lat = parseCoord(lat);
-            }
-            // Do the same for lng.
-            if(lng.indexOf('.') != -1) {
-              lng = +lng;
-            }
-            else {
-              lng = parseCoord(lng);
-            }
-            // Assign new coordData object to the appropriate index.
-            // NB: This is done instead of push() because ICAO coords are
-            // retrieved asynchronously but the order must be maintained.
-            extractedCoords[i] = new coordData('coord', lat, lng);
-          }
-        }
-        // If it's not coordinate entry, it must be ICAO.
-        else {
-          // Extract bearing and range, remove all whitespace and forward
-          // slashes.
-          var brngRng = $(currCoord).find('[name=brng_rng]').val()
-              .replace(' ', '').replace('/', '');
-          var bearing, range;
-          // If the text box was empty, set it to 0.
-          if(brngRng == '') {
-            brngRng = 0;
-            bearing = 0;
-            range = 0;
-          }
-          // Otherwise extract the values.
-          else {
-            // brngRng must be at least 4 characters long.
-            if(brngRng.length < 4 && brngRng != 0) {
-              throw('Bearing/Range is not valid.');
-            }
-            // If brngRange isn't 0, extract bearing and range.
-            // NB: 1852m per NM
-            bearing = brngRng.substr(0, 3);
-            range = brngRng.slice(3) * 1852;
-            if(isNaN(bearing) || isNaN(range)) {
-              throw('Bearing/Range is not valid.');
-            }
-          }
-          // Extract ICAO code
-          var icaoCode = $(currCoord).find('[name=icao_ident]').val();
-          // If icaoCode is valid, it will be either 3 or 4 characters long.
-          if(icaoCode.length != 3 && icaoCode.length != 4) {
-            throw('Invalid location code.');
-          }
-          // If the length is 3, assume Canadian identifier and prepend a C.
-          if(icaoCode.length == 3) {
-            icaoCode = 'C' + icaoCode;
-          }
-          // Assign new coordData object to the appropriate index.
-          // NB: This is done instead of push() because ICAO coords are
-          // retrieved asynchronously but the order must be maintained.
-          extractedCoords[i] = new coordData('icao', bearing, range,
-              icaoCode);
-        }
-      }
-      // Execute the callback.
-      if(typeof callback == 'function') {
-        callback(extractedCoords);
-      }
-    }
 
     /*
      * Recursively extract coordinate from input data. Strip last array
@@ -1608,6 +1582,10 @@
       });
     }
 
+</script>
+
+<!-- Plot functions -->
+<script type="text/javascript">
     /*
      * Plots a SIGMET after extracting required information from form
      * elements.
@@ -2023,6 +2001,10 @@
       }
     }
 
+</script>
+
+<!-- Init functions -->
+<script type="text/javascript">
     /*
      * Initializes the application by loading the map and assets, configuring
      * listeners and setting up the UI.
@@ -2073,8 +2055,8 @@
         change: function(event, ui) {
           var newType = $(ui.newContent).attr('id');
           // Calculations are only needed with sigmets, pireps and notams.
-          if(newType == 'sigmets' || newType == 'pireps' ||
-              newType == 'notams') {
+          if(newType == 'sigmets' || newType == 'pireps' || newType == 'notams') 
+		  {
             var newTypeTabs = newType.slice(0, -1) + '_tabs';
             // If there are no tabs, reset markers to defaults.
             if($('#' + newType).find('.ui-tabs-panel:not(.ui-tabs-hide)')
@@ -2100,14 +2082,14 @@
               }
             }
           }
-          // Otherwise RCO selection or theme picker was selected and markers
+          
+		  // Otherwise RCO selection or theme picker was selected and markers
           // should be set to default.
           else {
             calcBcast(null);
           }
         }
       });
-      //$('#theme_roller').themeswitcher({loadTheme:'Cupertino'});
 
       // Keep right-panel accordian sized properly when window is resized and
       // ensure title and disclaimer are realigned.
@@ -2161,10 +2143,13 @@
       $('#modal_help').tabs();
 
       // Create other triggers and actions.
-      $('#mission_select > :radio').change(selectMission);
-      $('.mission').bind('click', function() {
-        toggleMission($(this));
-      });
+	  
+	  //Check and uncheck all RCO on mission checkbox click
+	  $('#north').bind('click', function () { toggleMission($(this))});
+	  $('#south').bind('click', function () { toggleMission($(this))});
+	  
+	  
+	  
       $('.rco_box').bind('click', function() {
         toggleBox($(this));
       });
@@ -2196,7 +2181,7 @@
     }
 
     $(document).ready(init);
-  </SCRIPT>
+	</SCRIPT>
 
 </head>
 <body>
@@ -2204,53 +2189,30 @@
   <div id="left_panel" class="left_panel"></div>
   <div id="right_panel" class="right_panel ui-widget-content">
     <h2><a href="#">RCO and Mission Selection</a></h2>
+	
     <div id="rco_configuration">
-      <FORM class="center radio_button" id=mission_select autocomplete="off">
-			<INPUT id=select_three_sector type=radio CHECKED name=mission > 
-				<LABEL for=select_three_sector></LABEL>
-				 
-			<INPUT id=select_two_sector type=radio name=mission> 
-				<LABEL for=select_two_sector></LABEL>
-		</FORM>
+
 		
 		<FORM class="center top_margin" id=radius>
 			<INPUT id=ring_radius onfocus=this.select() size=3> NM Rings
 			<BUTTON class=top_margin id=reset_rings>Reset</BUTTON> 
 		</FORM>
 		
+		
+		<!-- Container for North Checkboxes -->
 		<INPUT class=mission id=north type=checkbox CHECKED> 
-		
 		<LABEL for=north>North</LABEL>
+		<div class=rco_boxes id=north_checkboxes></div>
 		
 		
-		<DIV class=three_sectors>
-			<DIV class=rco_boxes id=north2></DIV>
-		</DIV>
-
-		<DIV class="two_sectors hidden">
-			<DIV class=rco_boxes id=north2></DIV>
-		</DIV> 
-		
-		<DIV class=three_sectors>
-			<DIV class=rco_boxes id=central3></DIV>
-		</DIV>
-		
+		<!-- Container for south checkboxes -->
 		<INPUT class=mission id=south type=checkbox CHECKED> 
 		<LABEL for=south>South</LABEL> 
+		<div class=rco_boxes id=south_checkboxes></div>
 
-		<DIV class=three_sectors>
-			<DIV class=rco_boxes id=south2></DIV>
-		</DIV>
-
-		<DIV class="two_sectors hidden">
-			<DIV class=rco_boxes id=south2></DIV>
-		</DIV>
-
-		<DIV class="center top_margin">
-			<INPUT class=button id=hide_markers type=checkbox> 
-			<LABEL for=hide_markers>Hide Markers</LABEL> 
-		</DIV>
     </div>
+	
+	
     <h2><a href="#">SIGMETs</a></h2>
     <div id="sigmets">
       <button id="add_sigmet" class="bottom_margin add_tab">New SIGMET</button>
@@ -2260,7 +2222,8 @@
         </ul>
       </div>
     </div>
-    <h2><a href="#">PIREPs</a></h2>
+    
+	<h2><a href="#">PIREPs</a></h2>
     <div id="pireps">
       <button id="add_pirep" class="bottom_margin add_tab">New PIREP</button>
       <div id="pirep_tabs_div" class="tabs">
@@ -2268,7 +2231,8 @@
         </ul>
       </div>
     </div>
-    <h2><a href="#">NOTAMs</a></h2>
+    
+	<h2><a href="#">NOTAMs</a></h2>
     <div id="notams">
       <button id="add_notam" class="bottom_margin add_tab">New NOTAM</button>
       <div id="notam_tabs_div" class="tabs">
@@ -2276,15 +2240,14 @@
         </ul>
       </div>
     </div>
-    <h2><a href="#">Help</a></h2>
+    
+	<h2><a href="#">Help</a></h2>
     <div id="help">
       <button id="show_help">Show Help</button>
     </div>
-    <h2><a href="#">Change Theme</a></h2>
-    <div id="change_theme">
-      <div id="theme_roller"></div>
-    </div>
+    
   </div>
+  
   <div id="title">
     <h1>FIC RCO MAP</h1>
     <h3>All information approximate</h3>
